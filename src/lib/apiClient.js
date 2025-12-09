@@ -1,0 +1,285 @@
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+class ApiClient {
+  constructor() {
+    this.baseURL = API_URL;
+    this.token = localStorage.getItem('auth_token');
+  }
+
+  setToken(token) {
+    this.token = token;
+    if (token) {
+      localStorage.setItem('auth_token', token);
+    } else {
+      localStorage.removeItem('auth_token');
+    }
+  }
+
+  async request(endpoint, options = {}) {
+    const url = `${this.baseURL}${endpoint}`;
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP error! status: ${response.status}`);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('API Request Error:', error);
+      throw error;
+    }
+  }
+
+  // ============ AUTH ============
+  async login(email, password) {
+    const data = await this.request('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    if (data.token) {
+      this.setToken(data.token);
+    }
+    return data;
+  }
+
+  async register(email, password, nome) {
+    const data = await this.request('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, nome }),
+    });
+    if (data.token) {
+      this.setToken(data.token);
+    }
+    return data;
+  }
+
+  async getMe() {
+    return this.request('/auth/me');
+  }
+
+  async logout() {
+    await this.request('/auth/logout', { method: 'POST' });
+    this.setToken(null);
+  }
+
+  // ============ RADIOS ============
+  async getRadios() {
+    return this.request('/radios');
+  }
+
+  async getRadio(id) {
+    return this.request(`/radios/${id}`);
+  }
+
+  async createRadio(data) {
+    return this.request('/radios', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateRadio(id, data) {
+    return this.request(`/radios/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteRadio(id) {
+    return this.request(`/radios/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ============ GRAVACOES ============
+  async getGravacoes(filters = {}) {
+    const params = new URLSearchParams();
+    if (filters.radioId) params.append('radio_id', filters.radioId);
+    if (filters.data) params.append('data', filters.data);
+    if (filters.cidade) params.append('cidade', filters.cidade);
+    if (filters.estado) params.append('estado', filters.estado);
+    
+    const query = params.toString();
+    return this.request(`/gravacoes${query ? `?${query}` : ''}`);
+  }
+
+  async getGravacao(id) {
+    return this.request(`/gravacoes/${id}`);
+  }
+
+  async deleteGravacao(id) {
+    return this.request(`/gravacoes/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async batchDeleteGravacoes(ids) {
+    return this.request('/gravacoes/batch-delete', {
+      method: 'POST',
+      body: JSON.stringify({ gravacao_ids: ids }),
+    });
+  }
+
+  async getGravacoesStats() {
+    return this.request('/gravacoes/stats');
+  }
+
+  // ============ AGENDAMENTOS ============
+  async getAgendamentos() {
+    return this.request('/agendamentos');
+  }
+
+  async getAgendamento(id) {
+    return this.request(`/agendamentos/${id}`);
+  }
+
+  async createAgendamento(data) {
+    return this.request('/agendamentos', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateAgendamento(id, data) {
+    return this.request(`/agendamentos/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteAgendamento(id) {
+    return this.request(`/agendamentos/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async toggleAgendamentoStatus(id) {
+    return this.request(`/agendamentos/${id}/toggle-status`, {
+      method: 'POST',
+    });
+  }
+
+  // ============ TAGS ============
+  async getTags() {
+    return this.request('/tags');
+  }
+
+  async getTag(id) {
+    return this.request(`/tags/${id}`);
+  }
+
+  async createTag(data) {
+    return this.request('/tags', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateTag(id, data) {
+    return this.request(`/tags/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteTag(id) {
+    return this.request(`/tags/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async addTagToGravacao(gravacaoId, tagId) {
+    return this.request(`/tags/gravacao/${gravacaoId}`, {
+      method: 'POST',
+      body: JSON.stringify({ tag_id: tagId }),
+    });
+  }
+
+  async removeTagFromGravacao(gravacaoId, tagId) {
+    return this.request(`/tags/gravacao/${gravacaoId}/${tagId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ============ RECORDING ============
+  async startRecording(recordingId) {
+    return this.request('/recording/start', {
+      method: 'POST',
+      body: JSON.stringify({ recording_id: recordingId }),
+    });
+  }
+
+  async stopRecording(recordingId) {
+    return this.request(`/recording/stop/${recordingId}`, {
+      method: 'POST',
+    });
+  }
+
+  async processAudioWithAI(gravacaoId, palavrasChave) {
+    return this.request('/recording/process-ai', {
+      method: 'POST',
+      body: JSON.stringify({
+        gravacao_id: gravacaoId,
+        palavras_chave: palavrasChave,
+      }),
+    });
+  }
+
+  // ============ WEBSOCKET ============
+  connectWebSocket(userId, onMessage) {
+    // Implementar conexão WebSocket com Flask-SocketIO
+    // Requer instalação: npm install socket.io-client
+    try {
+      const { io } = require('socket.io-client');
+      const wsUrl = API_URL.replace('/api', '').replace('http', 'ws');
+      const socket = io(wsUrl);
+      
+      socket.on('connect', () => {
+        socket.emit('subscribe', { channel: `user_${userId}` });
+      });
+
+      socket.on('update', (data) => {
+        if (onMessage) {
+          onMessage(data);
+        }
+      });
+
+      socket.on('subscribed', (data) => {
+        console.log('Subscribed to channel:', data.channel);
+      });
+
+      return () => {
+        socket.disconnect();
+      };
+    } catch (error) {
+      console.warn('WebSocket not available. Install socket.io-client:', error);
+      return () => {};
+    }
+  }
+}
+
+const apiClient = new ApiClient();
+
+// Inicializar token se existir
+const savedToken = localStorage.getItem('auth_token');
+if (savedToken) {
+  apiClient.setToken(savedToken);
+}
+
+export default apiClient;
+

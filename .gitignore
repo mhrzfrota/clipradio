@@ -1,1 +1,42 @@
 node_modules
+# arquivos sensíveis
+.env
+.env.local
+.env.production
+.env.development
+*.env
+
+# Backend
+backend/.env
+backend/.env.*
+
+# Logs
+*.log
+npm-debug.log*
+
+# Dependências
+node_modules/
+backend/venv/
+backend/__pycache__/
+
+# Storage (arquivos de áudio)
+backend/storage/
+backend/uploads/
+
+# IDEs
+.vscode/
+.idea/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+EOF
+
+# Claude
+.claude/*
+/claude
+MIGRACAO_SUPABASE_PYTHON.md
+README_MIGRACAO.md
