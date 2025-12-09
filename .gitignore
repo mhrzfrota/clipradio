@@ -37,6 +37,8 @@ EOF
 
 # Claude
 .claude/*
-/claude
+/.claude
+.claude
+.claude/
 MIGRACAO_SUPABASE_PYTHON.md
 README_MIGRACAO.md
