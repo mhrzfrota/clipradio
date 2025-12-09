@@ -1,27 +1,29 @@
-
 services:
   backend:
     build: ./backend
-    container_name: horizons_backend
+    container_name: clipradio_backend
     restart: unless-stopped
     ports:
       - "2027:5000"
     environment:
-      - DB_HOST=${DB_HOST:-172.17.0.1}
-      - DB_PORT=${DB_PORT:-5432}
-      - DB_NAME=${DB_NAME:-clipradio_db}
-      - DB_USER=${DB_USER:-clipradio_user}
+      - DB_HOST=host.docker.internal
+      - DB_PORT=5432
+      - DB_NAME=clipradio_db
+      - DB_USER=clipradio_user
       - DB_PASSWORD=${DB_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
       - SECRET_KEY=${SECRET_KEY}
       - FLASK_ENV=production
+      - CORS_ORIGINS=*
     volumes:
       - ./backend/storage:/app/storage
       - ./backend/uploads:/app/uploads
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
-      - app_network
+      - clipradio_network
     healthcheck:
-      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:5000/api/health\")' || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/api/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -31,9 +33,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-      args:
-        - VITE_API_URL=${VITE_API_URL:-http://localhost:5000/api}
-    container_name: horizons_frontend
+    container_name: clipradio_frontend
     restart: unless-stopped
     ports:
       - "2026:80"
@@ -41,38 +41,8 @@ services:
       backend:
         condition: service_healthy
     networks:
-      - app_network
+      - clipradio_network
 
 networks:
-  app_network:
+  clipradio_network:
     driver: bridge
-
-# Remova a linha "version:" para limpar o aviso
-  services:
-  db:
-    image: postgres:14-alpine
-    environment:
-      POSTGRES_DB: clipradio_db
-      POSTGRES_USER: clipradio_user
-      POSTGRES_PASSWORD: Mslestrategia.2026@
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    networks:
-      - app_network
-
-  backend:
-    build: ./backend
-    environment:
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: clipradio_db
-      DB_USER: clipradio_user
-      DB_PASSWORD: Mslestrategia.2026@
-      JWT_SECRET: rT/jYw7zmVVjgjjDn/tWitSfPLcxG2hB1doUjzr6w46+L7TRuDgumEIRsuf+mNcV
-      SECRET_KEY: HOXUsydnfzjfsTMHjSpiz4cYaS9wlCiz86ecKsv99ZrqlrQqQVUssgznU5dmKygu
-    depends_on:
-      - db
-
-volumes:
-  pgdata:
-
