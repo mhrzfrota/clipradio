@@ -12,6 +12,33 @@ def get_user_id():
     payload = decode_token(token)
     return payload['user_id'] if payload else None
 
+@bp.route('', methods=['POST'])
+@token_required
+def create_gravacao():
+    """Cria um registro de gravação para o usuário autenticado"""
+    user_id = get_user_id()
+    data = request.get_json() or {}
+
+    radio_id = data.get('radio_id')
+    if not radio_id:
+        return jsonify({'error': 'radio_id is required'}), 400
+
+    gravacao = Gravacao(
+        user_id=user_id,
+        radio_id=radio_id,
+        status=data.get('status', 'iniciando'),
+        tipo=data.get('tipo', 'manual'),
+        duracao_minutos=data.get('duracao_minutos', 0),
+        duracao_segundos=data.get('duracao_segundos', 0),
+        tamanho_mb=data.get('tamanho_mb', 0.0),
+        batch_id=data.get('batch_id')
+    )
+
+    db.session.add(gravacao)
+    db.session.commit()
+
+    return jsonify(gravacao.to_dict(include_radio=True)), 201
+
 @bp.route('', methods=['GET'])
 @token_required
 def get_gravacoes():

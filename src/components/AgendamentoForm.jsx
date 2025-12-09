@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader, Save, Clock, Repeat, Radio as RadioIcon } from 'lucide-react';
-import { formatInTimeZone, toDate } from 'date-fns-tz';
+import apiClient from '@/lib/apiClient';
 
 const AgendamentoForm = ({ agendamentoIdParam }) => {
   const navigate = useNavigate();
@@ -31,11 +30,11 @@ const AgendamentoForm = ({ agendamentoIdParam }) => {
 
   const DIAS_SEMANA_OPTIONS = [
     { id: 1, label: 'Segunda-feira' },
-    { id: 2, label: 'Terça-feira' },
+    { id: 2, label: 'Ter�a-feira' },
     { id: 3, label: 'Quarta-feira' },
     { id: 4, label: 'Quinta-feira' },
     { id: 5, label: 'Sexta-feira' },
-    { id: 6, label: 'Sábado' },
+    { id: 6, label: 'S�bado' },
     { id: 0, label: 'Domingo' },
   ];
 
@@ -44,51 +43,31 @@ const AgendamentoForm = ({ agendamentoIdParam }) => {
     setLoading(true);
 
     try {
-      const { data: radioData, error: radioError } = await supabase
-        .from('radios')
-        .select('id, nome')
-        .eq('user_id', user.id);
-      if (radioError) throw radioError;
-      setRadios(radioData);
+      const radioData = await apiClient.getRadios();
+      setRadios(radioData || []);
 
       if (agendamentoIdParam) {
         setEditingId(agendamentoIdParam);
-        const { data: agendamentoData, error: agendamentoError } = await supabase
-          .from('agendamentos')
-          .select('*')
-          .eq('id', agendamentoIdParam)
-          .eq('user_id', user.id)
-          .maybeSingle();
-        
-        if (agendamentoError) throw agendamentoError;
+        const agendamentoData = await apiClient.getAgendamento(agendamentoIdParam);
 
         if (agendamentoData) {
-            let localHoraInicio, localHoraFim;
-            
-            try {
-              const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-              localHoraInicio = formatInTimeZone(`1970-01-01T${agendamentoData.hora_inicio}Z`, userTimeZone, 'HH:mm');
-              localHoraFim = formatInTimeZone(`1970-01-01T${agendamentoData.hora_fim}Z`, userTimeZone, 'HH:mm');
-            } catch (timezoneError) {
-              // Fallback para horários UTC se conversão falhar
-              localHoraInicio = agendamentoData.hora_inicio.substring(0, 5);
-              localHoraFim = agendamentoData.hora_fim.substring(0, 5);
-              if (process.env.NODE_ENV === 'development') {
-                console.warn('Fallback para horário UTC devido a erro de timezone:', timezoneError);
-              }
-            }
+          const dataInicio = agendamentoData.data_inicio ? new Date(agendamentoData.data_inicio) : new Date();
+          const horaInicio = dataInicio.toISOString().substring(11, 16);
+          const duracao = agendamentoData.duracao_minutos || 60;
+          const horaFimDate = new Date(dataInicio.getTime() + duracao * 60000);
+          const horaFim = horaFimDate.toISOString().substring(11, 16);
 
-            setFormData({
-                radio_id: agendamentoData.radio_id,
-                hora_inicio: localHoraInicio,
-                hora_fim: localHoraFim,
-                tipo_recorrencia: agendamentoData.tipo_recorrencia,
-                data_inicio: agendamentoData.data_inicio,
-                dias_da_semana: agendamentoData.dias_da_semana || [],
-            });
+          setFormData({
+            radio_id: agendamentoData.radio_id,
+            hora_inicio: horaInicio,
+            hora_fim: horaFim,
+            tipo_recorrencia: agendamentoData.tipo_recorrencia || 'none',
+            data_inicio: agendamentoData.data_inicio?.substring(0, 10) || new Date().toISOString().split('T')[0],
+            dias_da_semana: agendamentoData.dias_semana || [],
+          });
         } else {
-            toast({ title: "Agendamento não encontrado", description: "Não foi possível carregar os dados para edição.", variant: "destructive" });
-            navigate('/agendamentos');
+          toast({ title: "Agendamento n�o encontrado", description: "N�o foi poss�vel carregar os dados para edi��o.", variant: "destructive" });
+          navigate('/agendamentos');
         }
       }
     } catch (error) {
@@ -123,15 +102,14 @@ const AgendamentoForm = ({ agendamentoIdParam }) => {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!formData.radio_id) {
-      toast({ variant: "destructive", title: "Erro de Validação", description: "Por favor, selecione uma rádio." });
+      toast({ variant: "destructive", title: "Erro de Valida��o", description: "Por favor, selecione uma r�dio." });
       return;
     }
     if (formData.tipo_recorrencia === 'weekly' && formData.dias_da_semana.length === 0) {
-      toast({ variant: "destructive", title: "Erro de Validação", description: "Selecione pelo menos um dia da semana." });
+      toast({ variant: "destructive", title: "Erro de Valida��o", description: "Selecione pelo menos um dia da semana." });
       return;
     }
     
-    // Validar se horário de início não é posterior ao horário de fim
     const [horaInicio, minutoInicio] = formData.hora_inicio.split(':').map(Number);
     const [horaFim, minutoFim] = formData.hora_fim.split(':').map(Number);
     const minutosInicio = horaInicio * 60 + minutoInicio;
@@ -140,56 +118,39 @@ const AgendamentoForm = ({ agendamentoIdParam }) => {
     if (minutosInicio >= minutosFim) {
       toast({ 
         variant: "destructive", 
-        title: "Erro de Validação", 
-        description: "O horário de início deve ser anterior ao horário de fim." 
+        title: "Erro de Valida��o", 
+        description: "O hor�rio de in�cio deve ser anterior ao hor�rio de fim." 
       });
       return;
     }
 
-    setIsSubmitting(true);
-    
-    let utcHoraInicio, utcHoraFim;
-    
-    try {
-      const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const dataRef = formData.data_inicio || new Date().toISOString().split('T')[0];
-
-      utcHoraInicio = formatInTimeZone(toDate(`${dataRef}T${formData.hora_inicio}`, { timeZone: userTimeZone }), 'UTC', 'HH:mm:ss');
-      utcHoraFim = formatInTimeZone(toDate(`${dataRef}T${formData.hora_fim}`, { timeZone: userTimeZone }), 'UTC', 'HH:mm:ss');
-    } catch (timezoneError) {
-      // Fallback para horários locais se conversão de timezone falhar
-      utcHoraInicio = `${formData.hora_inicio}:00`;
-      utcHoraFim = `${formData.hora_fim}:00`;
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('Fallback para horário local devido a erro de timezone:', timezoneError);
-      }
-    }
+    const duracao_minutos = minutosFim - minutosInicio;
+    const dataHoraInicioIso = new Date(`${formData.data_inicio}T${formData.hora_inicio}:00Z`).toISOString();
 
     const payload = {
-      ...formData,
-      hora_inicio: utcHoraInicio,
-      hora_fim: utcHoraFim,
-      user_id: user.id,
+      radio_id: formData.radio_id,
+      data_inicio: dataHoraInicioIso,
+      duracao_minutos,
+      tipo_recorrencia: formData.tipo_recorrencia,
+      dias_semana: formData.dias_da_semana,
       status: 'agendado',
     };
 
-    let error;
-    if (editingId) {
-      const { error: updateError } = await supabase.from('agendamentos').update(payload).eq('id', editingId);
-      error = updateError;
-    } else {
-      const { error: insertError } = await supabase.from('agendamentos').insert(payload);
-      error = insertError;
-    }
+    setIsSubmitting(true);
 
-    if (error) {
-      toast({ variant: "destructive", title: "Erro ao salvar", description: error.message });
-    } else {
+    try {
+      if (editingId) {
+        await apiClient.updateAgendamento(editingId, payload);
+      } else {
+        await apiClient.createAgendamento(payload);
+      }
       toast({ title: "Sucesso!", description: `Agendamento ${editingId ? 'atualizado' : 'criado'} com sucesso.` });
       navigate('/agendamentos');
+    } catch (error) {
+      toast({ variant: "destructive", title: "Erro ao salvar", description: error.message });
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setIsSubmitting(false);
   }
 
   if (loading) {
@@ -199,9 +160,9 @@ const AgendamentoForm = ({ agendamentoIdParam }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-            <Label htmlFor="radio_id" className="flex items-center gap-2 mb-1"><RadioIcon className="w-4 h-4" /> Rádio</Label>
+            <Label htmlFor="radio_id" className="flex items-center gap-2 mb-1"><RadioIcon className="w-4 h-4" /> R�dio</Label>
             <Select name="radio_id" value={formData.radio_id} onValueChange={v => handleSelectChange('radio_id', v)} disabled={loading || radios.length === 0}>
-                <SelectTrigger id="radio_id"><SelectValue placeholder="Selecione uma rádio..." /></SelectTrigger>
+                <SelectTrigger id="radio_id"><SelectValue placeholder="Selecione uma r�dio..." /></SelectTrigger>
                 <SelectContent>
                     {radios.map(radio => (
                         <SelectItem key={radio.id} value={radio.id}>{radio.nome}</SelectItem>
@@ -212,7 +173,7 @@ const AgendamentoForm = ({ agendamentoIdParam }) => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-                <Label htmlFor="hora_inicio" className="flex items-center gap-2"><Clock className="w-4 h-4" /> Hora de Início</Label>
+                <Label htmlFor="hora_inicio" className="flex items-center gap-2"><Clock className="w-4 h-4" /> Hora de In�cio</Label>
                 <Input type="time" id="hora_inicio" name="hora_inicio" value={formData.hora_inicio} onChange={handleInputChange} className="input" required />
             </div>
             <div>
@@ -222,11 +183,11 @@ const AgendamentoForm = ({ agendamentoIdParam }) => {
         </div>
         
         <div>
-            <Label className="flex items-center gap-2 mb-1"><Repeat className="w-4 h-4" /> Recorrência</Label>
+            <Label className="flex items-center gap-2 mb-1"><Repeat className="w-4 h-4" /> Recorr�ncia</Label>
             <Select name="tipo_recorrencia" value={formData.tipo_recorrencia} onValueChange={v => handleSelectChange('tipo_recorrencia', v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="none">Gravação Única</SelectItem>
+                    <SelectItem value="none">Grava��o �nica</SelectItem>
                     <SelectItem value="daily">Diariamente</SelectItem>
                     <SelectItem value="weekly">Semanalmente</SelectItem>
                 </SelectContent>
@@ -235,7 +196,7 @@ const AgendamentoForm = ({ agendamentoIdParam }) => {
 
         {formData.tipo_recorrencia === 'none' && (
             <div>
-                <Label htmlFor="data_inicio">Data da Gravação</Label>
+                <Label htmlFor="data_inicio">Data da Grava��o</Label>
                 <Input type="date" id="data_inicio" name="data_inicio" value={formData.data_inicio} onChange={handleInputChange} className="input" required />
             </div>
         )}

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
-import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { AlertCircle, Radio, Clock, Info } from 'lucide-react';
+import apiClient from '@/lib/apiClient';
 
 export default function GravadorManual() {
   const { user } = useAuth();
@@ -22,96 +22,55 @@ export default function GravadorManual() {
 
   useEffect(() => {
     const fetchRadios = async () => {
-      if (!user) return;
       setIsFetchingRadios(true);
       try {
-        const { data, error } = await supabase
-          .from('radios')
-          .select('id, nome')
-          .eq('user_id', user.id)
-          .order('nome', { ascending: true });
-
-        if (error) throw error;
-        setRadios(data);
+        const data = await apiClient.getRadios();
+        setRadios(data || []);
       } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "Erro ao buscar r√°dios",
-          description: error.message,
-        });
+        toast({ variant: 'destructive', title: 'Erro ao buscar r·dios', description: error.message });
       } finally {
         setIsFetchingRadios(false);
       }
     };
 
-    fetchRadios();
+    if (user) {
+      fetchRadios();
+    }
   }, [user, toast]);
 
   const handleStartRecording = async () => {
     if (!selectedRadio || !duration || duration < 1 || duration > 240) {
       toast({
         variant: "destructive",
-        title: "Campos obrigat√≥rios",
-        description: "Por favor, selecione uma r√°dio e defina uma dura√ß√£o v√°lida (1-240 minutos).",
+        title: "Campos obrigatÛrios",
+        description: "Selecione uma r·dio e defina uma duraÁ„o v·lida (1-240 minutos).",
       });
       return;
     }
 
     setIsLoading(true);
     try {
-      const { data: gravacao, error: createError } = await supabase
-        .from('gravacoes')
-        .insert({
-          user_id: user.id,
-          radio_id: selectedRadio,
-          status: 'iniciando',
-          tipo: 'manual',
-          duracao_minutos: duration,
-        })
-        .select('id, user_id')
-        .single();
-
-      if (createError) throw createError;
-
-      const { error: invokeError } = await supabase.functions.invoke('record-stream', {
-        body: {
-          recording_id: gravacao.id,
-          user_id: gravacao.user_id,
-        },
+      const gravacao = await apiClient.createGravacao({
+        radio_id: selectedRadio,
+        duracao_minutos: duration,
+        status: 'iniciando',
+        tipo: 'manual',
       });
 
-      if (invokeError) {
-        throw invokeError;
-      }
+      await apiClient.startRecording(gravacao.id);
 
       toast({
-        title: "Grava√ß√£o iniciada!",
-        description: "Sua grava√ß√£o manual come√ßou em segundo plano.",
+        title: "GravaÁ„o iniciada!",
+        description: "Sua gravaÁ„o manual comeÁou em segundo plano.",
       });
       setSelectedRadio('');
       setDuration(60);
 
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error("Erro ao iniciar grava√ß√£o:", error);
-      }
-      let errorMessage = "Ocorreu uma falha desconhecida.";
-
-      if (error.context && typeof error.context.json === 'function') {
-        try {
-          const errorJson = await error.context.json();
-          errorMessage = errorJson.error || error.message;
-        } catch (e) {
-          errorMessage = error.message;
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
       toast({
         variant: "destructive",
-        title: "Erro ao iniciar grava√ß√£o",
-        description: errorMessage,
+        title: "Erro ao iniciar gravaÁ„o",
+        description: error.message || "Ocorreu uma falha desconhecida.",
       });
     } finally {
       setIsLoading(false);
@@ -121,8 +80,8 @@ export default function GravadorManual() {
   return (
     <>
       <Helmet>
-        <title>Grava√ß√£o Manual - Gestor de R√°dios</title>
-        <meta name="description" content="Inicie uma grava√ß√£o de r√°dio manualmente a qualquer momento." />
+        <title>GravaÁ„o Manual - Gestor de R·dios</title>
+        <meta name="description" content="Inicie uma gravaÁ„o de r·dio manualmente a qualquer momento." />
       </Helmet>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -131,7 +90,7 @@ export default function GravadorManual() {
         className="container mx-auto max-w-4xl px-4 py-8"
       >
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-4xl font-bold tracking-tight text-slate-50">Grava√ß√£o Manual</h1>
+          <h1 className="text-4xl font-bold tracking-tight text-slate-50">GravaÁ„o Manual</h1>
         </div>
 
         <Card className="bg-slate-900/70 border-slate-800 backdrop-blur-sm">
@@ -139,9 +98,9 @@ export default function GravadorManual() {
             <div className="flex items-center gap-4">
               <Radio className="w-8 h-8 text-cyan-400" />
               <div>
-                <CardTitle className="text-2xl font-semibold text-slate-50">Iniciar Nova Grava√ß√£o</CardTitle>
+                <CardTitle className="text-2xl font-semibold text-slate-50">Iniciar Nova GravaÁ„o</CardTitle>
                 <CardDescription className="text-slate-400">
-                  Selecione uma r√°dio e a dura√ß√£o para come√ßar a gravar imediatamente.
+                  Selecione uma r·dio e a duraÁ„o para comeÁar a gravar imediatamente.
                 </CardDescription>
               </div>
             </div>
@@ -149,14 +108,14 @@ export default function GravadorManual() {
           <CardContent>
             <div className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="radio-select" className="text-slate-300">R√°dio</Label>
+                <Label htmlFor="radio-select" className="text-slate-300">R·dio</Label>
                 <Select
                   value={selectedRadio}
                   onValueChange={setSelectedRadio}
                   disabled={isFetchingRadios || isLoading}
                 >
                   <SelectTrigger id="radio-select" className="w-full bg-slate-800 border-slate-700 text-slate-50">
-                    <SelectValue placeholder={isFetchingRadios ? "Carregando r√°dios..." : "Selecione uma r√°dio"} />
+                    <SelectValue placeholder={isFetchingRadios ? "Carregando r·dios..." : "Selecione uma r·dio"} />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-900 border-slate-800 text-slate-50">
                     {radios.map((radio) => (
@@ -168,14 +127,14 @@ export default function GravadorManual() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="duration" className="text-slate-300">Dura√ß√£o da Grava√ß√£o (em minutos)</Label>
+                <Label htmlFor="duration" className="text-slate-300">DuraÁ„o da GravaÁ„o (em minutos)</Label>
                 <Input
                   id="duration"
                   type="number"
                   value={duration}
                   onChange={(e) => {
                     const value = parseInt(e.target.value, 10);
-                    if (!isNaN(value) && value >= 1 && value <= 240) {
+                    if (!isNaN(value)) {
                       setDuration(value);
                     }
                   }}
@@ -199,14 +158,17 @@ export default function GravadorManual() {
                 ) : (
                   <div className="flex items-center justify-center">
                     <Clock className="mr-2 h-5 w-5" />
-                    Gravar Agora
+                    Iniciar GravaÁ„o
                   </div>
                 )}
               </Button>
-            </div>
-            <div className="mt-6 flex items-center gap-3 rounded-lg border border-blue-500/20 bg-blue-500/10 p-4 text-sm text-blue-300">
-              <Info className="h-5 w-5 flex-shrink-0" />
-              <span>A grava√ß√£o come√ßar√° em segundo plano. Voc√™ pode acompanhar o status na p√°gina de <strong className="font-semibold">Grava√ß√µes</strong>.</span>
+              <div className="p-4 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-300 text-sm flex items-start gap-3">
+                <Info className="w-4 h-4 text-cyan-400 mt-1" />
+                <div>
+                  <p>As gravaÁıes s„o executadas no servidor backend. VocÍ pode acompanhar o status na lista de gravaÁıes.</p>
+                  <p className="text-slate-400 mt-1">Certifique-se de que a URL do stream est· ativa antes de iniciar.</p>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

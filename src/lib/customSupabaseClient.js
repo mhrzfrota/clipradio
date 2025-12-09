@@ -1,23 +1,30 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = 'https://ssdfevqkhjcbeupcvowz.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzZGZldnFraGpjYmV1cGN2b3d6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM1NDYyNTksImV4cCI6MjA2OTEyMjI1OX0.vzd8_zXXShnAOfAt-crjbQy-uPAJZ44v86e3cHN3EYg';
-
-// Verificar se as credenciais est√£o definidas
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('‚ùå Erro: Credenciais do Supabase n√£o configuradas!');
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    storage: window.localStorage,
+// Supabase client removido: este stub evita chamadas indevidas.
+export const supabase = {
+  from() {
+    throw new Error('Supabase n„o est· mais disponÌvel neste projeto. Use apiClient.');
   },
-});
-
-// Teste de conex√£o b√°sico (opcional, apenas para debug)
-if (typeof window !== 'undefined') {
-  console.log('‚úÖ Cliente Supabase inicializado:', supabaseUrl);
-}
+  functions: {
+    async invoke() {
+      return { data: null, error: new Error('Supabase Functions n„o est„o habilitadas. Use a API do backend.') };
+    },
+  },
+  storage: {
+    from() {
+      return {
+        async upload() {
+          return { data: null, error: new Error('Storage do Supabase removido. Use backend/storage apropriado.') };
+        },
+        getPublicUrl() {
+          return { publicUrl: null };
+        },
+      };
+    },
+  },
+  channel() {
+    return {
+      on() { return this; },
+      subscribe() { return { id: null }; },
+    };
+  },
+  removeChannel() {},
+};

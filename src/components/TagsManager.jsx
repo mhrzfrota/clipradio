@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { supabase } from '@/lib/customSupabaseClient';
+import apiClient from '@/lib/apiClient';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
-import { Tag, Plus, Edit, Trash2, Loader } from 'lucide-react';
+import { Tag as TagIcon, Plus, Edit, Trash2, Loader } from 'lucide-react';
 
 const predefinedColors = [
   '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e'
@@ -23,8 +23,8 @@ const TagItem = ({ tag, onEdit, onDelete }) => (
     className="flex items-center justify-between p-3 bg-slate-800 rounded-lg"
   >
     <div className="flex items-center gap-3">
-      <div className="w-5 h-5 rounded-full" style={{ backgroundColor: tag.color }} />
-      <span className="font-medium text-slate-200">{tag.name}</span>
+      <div className="w-5 h-5 rounded-full" style={{ backgroundColor: tag.cor || '#6366f1' }} />
+      <span className="font-medium text-slate-200">{tag.nome}</span>
     </div>
     <div className="flex items-center gap-2">
       <Button variant="ghost" size="icon" onClick={() => onEdit(tag)}>
@@ -38,20 +38,20 @@ const TagItem = ({ tag, onEdit, onDelete }) => (
 );
 
 const TagForm = ({ tag, onSave, onCancel, loading }) => {
-  const [name, setName] = useState(tag ? tag.name : '');
-  const [color, setColor] = useState(tag ? tag.color : predefinedColors[5]);
+  const [name, setName] = useState(tag ? tag.nome : '');
+  const [color, setColor] = useState(tag ? tag.cor : predefinedColors[5]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!name.trim()) return;
-    onSave({ ...tag, name, color });
+    onSave({ ...tag, nome: name, cor: color });
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <Label htmlFor="tag-name" className="text-slate-300">Nome da Tag</Label>
-        <Input id="tag-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: NotÃ­cia Urgente" className="mt-1" />
+        <Input id="tag-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Notícia Urgente" className="mt-1" />
       </div>
       <div>
         <Label className="text-slate-300">Cor</Label>
@@ -96,13 +96,8 @@ const TagsManager = ({ onTagsUpdated }) => {
     if (!user) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('tags')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      setTags(data);
+      const data = await apiClient.getTags();
+      setTags(data || []);
     } catch (error) {
       toast({ variant: 'destructive', title: 'Erro ao buscar tags', description: error.message });
     } finally {
@@ -115,26 +110,17 @@ const TagsManager = ({ onTagsUpdated }) => {
   }, [fetchTags]);
 
   const handleSaveTag = async (tagData) => {
-    if (!tagData.name.trim()) {
-        toast({ variant: 'destructive', title: 'Erro', description: 'O nome da tag nÃ£o pode ser vazio.' });
-        return;
+    if (!tagData.nome.trim()) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'O nome da tag não pode ser vazio.' });
+      return;
     }
     setIsSubmitting(true);
     try {
-      const payload = {
-        user_id: user.id,
-        name: tagData.name,
-        color: tagData.color,
-      };
-      let response;
-      if (tagData.id) { // Update
-        response = await supabase.from('tags').update(payload).eq('id', tagData.id).select().single();
-      } else { // Create
-        response = await supabase.from('tags').insert(payload).select().single();
+      if (tagData.id) {
+        await apiClient.updateTag(tagData.id, { nome: tagData.nome, cor: tagData.cor });
+      } else {
+        await apiClient.createTag({ nome: tagData.nome, cor: tagData.cor });
       }
-      const { data, error } = response;
-      if (error) throw error;
-      
       toast({ title: `Tag ${tagData.id ? 'atualizada' : 'criada'} com sucesso!`, className: 'bg-green-600 text-white' });
       await fetchTags();
       if (onTagsUpdated) onTagsUpdated();
@@ -148,11 +134,10 @@ const TagsManager = ({ onTagsUpdated }) => {
   };
 
   const handleDeleteTag = async (tag) => {
-    if (!window.confirm(`Tem certeza que deseja excluir a tag "${tag.name}"?`)) return;
+    if (!window.confirm(`Tem certeza que deseja excluir a tag "${tag.nome}"?`)) return;
     try {
-      const { error } = await supabase.from('tags').delete().eq('id', tag.id);
-      if (error) throw error;
-      toast({ title: 'Tag excluÃ­da com sucesso!', className: 'bg-green-600 text-white' });
+      await apiClient.deleteTag(tag.id);
+      toast({ title: 'Tag excluída com sucesso!', className: 'bg-green-600 text-white' });
       await fetchTags();
       if (onTagsUpdated) onTagsUpdated();
     } catch (error) {
@@ -199,9 +184,9 @@ const TagsManager = ({ onTagsUpdated }) => {
             ))
           ) : (
             <div className="text-center py-12 text-slate-500">
-              <Tag className="w-12 h-12 mx-auto mb-4" />
+              <TagIcon className="w-12 h-12 mx-auto mb-4" />
               <p className="font-semibold">Nenhuma tag encontrada.</p>
-              <p className="text-sm">Clique em "Nova Tag" para comeÃ§ar a organizar.</p>
+              <p className="text-sm">Clique em "Nova Tag" para começar a organizar.</p>
             </div>
           )}
         </div>

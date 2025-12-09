@@ -4,7 +4,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { Loader } from 'lucide-react';
 
 const ProtectedRoute = ({ children }) => {
-  const { user, loading, session } = useAuth();
+  const { user, loading } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -15,8 +15,8 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  if (!user || !session) {
-    // Se não houver usuário ou sessão, redireciona para o login
+  if (!user) {
+    // Sem usu�rio autenticado: redireciona para o login
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Calendar, Clock, Plus, Edit, Trash2, Power, PowerOff, Loader, AlertCircle, CheckCircle, Repeat } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/lib/customSupabaseClient';
+import apiClient from '@/lib/apiClient';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
@@ -21,68 +21,51 @@ const Agendamentos = () => {
   const fetchAgendamentos = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const { data, error } = await supabase
-      .from('agendamentos')
-      .select('*, radios(nome)')
-      .eq('user_id', user.id)
-      .order('data_inicio', { ascending: false });
-    if (error) {
-      toast({ title: "Erro ao buscar agendamentos", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      const data = await apiClient.getAgendamentos();
       setAgendamentos(data || []);
+    } catch (error) {
+      toast({ title: "Erro ao buscar agendamentos", description: error.message, variant: "destructive" });
     }
     setLoading(false);
   }, [toast, user]);
 
   useEffect(() => {
     if (user) {
-        fetchAgendamentos();
+      fetchAgendamentos();
     }
-
-    const channel = supabase.channel('agendamentos-channel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'agendamentos', filter: `user_id=eq.${user?.id}` },
-        () => {
-          fetchAgendamentos();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [user, fetchAgendamentos]);
 
   const handleDelete = async (id) => {
     setIsDeleting(true);
     toast({ title: 'Removendo agendamento...', description: 'Aguarde um momento.' });
 
-    const { error } = await supabase.functions.invoke('delete-agendamento', {
-      body: JSON.stringify({ agendamento_id: id }),
-    });
-
-    if (error) {
-      toast({ title: "Erro ao remover agendamento", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      await apiClient.deleteAgendamento(id);
       toast({ title: "Agendamento removido com sucesso!", variant: 'success' });
       fetchAgendamentos();
+    } catch (error) {
+      toast({ title: "Erro ao remover agendamento", description: error.message, variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
     }
-    setIsDeleting(false);
   };
 
   const toggleStatus = async (id, currentStatus) => {
-    const newStatus = currentStatus === 'agendado' ? 'inativo' : 'agendado';
-    const { error } = await supabase.from('agendamentos').update({ status: newStatus }).eq('id', id);
-    if (error) {
-      toast({ title: "Erro ao alterar status", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      await apiClient.toggleAgendamentoStatus(id);
+      const newStatus = currentStatus === 'agendado' ? 'inativo' : 'agendado';
       toast({ title: newStatus === 'agendado' ? "Agendamento ativado" : "Agendamento desativado" });
+      fetchAgendamentos();
+    } catch (error) {
+      toast({ title: "Erro ao alterar status", description: error.message, variant: "destructive" });
     }
   };
   
   const getStatusInfo = (status) => {
     switch (status) {
       case 'agendado': return { text: 'Agendado', className: 'status-active', icon: <Clock className="w-3 h-3 mr-1" /> };
-      case 'concluido': return { text: 'Conclu√≠do', className: 'status-completed', icon: <CheckCircle className="w-3 h-3 mr-1" /> };
+      case 'concluido': return { text: 'ConcluÌdo', className: 'status-completed', icon: <CheckCircle className="w-3 h-3 mr-1" /> };
       case 'em_execucao': return { text: 'Gravando', className: 'status-recording', icon: <Loader className="w-3 h-3 mr-1 animate-spin" /> };
       case 'erro': return { text: 'Erro', className: 'status-error', icon: <AlertCircle className="w-3 h-3 mr-1" /> };
       case 'inativo': return { text: 'Inativo', className: 'status-inactive', icon: <PowerOff className="w-3 h-3 mr-1" /> };
@@ -92,36 +75,41 @@ const Agendamentos = () => {
 
   const formatRecorrencia = (agendamento) => {
     if (agendamento.tipo_recorrencia === 'none') {
-        const [year, month, day] = agendamento.data_inicio.split('-');
-        const date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
-        const dataFormatada = new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(date);
-        return `√önico - ${dataFormatada}`;
+      if (!agendamento.data_inicio) return '⁄nico';
+      const [year, month, day] = agendamento.data_inicio.split('-');
+      const date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
+      const dataFormatada = new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(date);
+      return `⁄nico - ${dataFormatada}`;
     }
-    const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'S√°b'];
+    const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'S·b'];
     let str = '';
     switch (agendamento.tipo_recorrencia) {
-        case 'daily': str = 'Diariamente'; break;
-        case 'weekly': 
-            str = agendamento.dias_da_semana.sort().map(d => dias[d]).join(', ');
-            break;
-        default: str = 'Recorrente';
+      case 'daily': str = 'Diariamente'; break;
+      case 'weekly': 
+        str = (agendamento.dias_semana || []).sort().map(d => dias[d]).join(', ');
+        break;
+      default: str = 'Recorrente';
     }
     return str;
-};
+  };
 
   const formatAgendamentoDisplay = (agendamento) => {
-    let localHoraInicio, localHoraFim;
-    
+    let localHoraInicio = '';
+    let localHoraFim = '';
     try {
+      const inicio = agendamento.data_inicio ? new Date(agendamento.data_inicio) : null;
+      const duracaoMin = agendamento.duracao_minutos || 0;
+      const fim = inicio ? new Date(inicio.getTime() + duracaoMin * 60000) : null;
       const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      localHoraInicio = formatInTimeZone(`1970-01-01T${agendamento.hora_inicio}Z`, userTimeZone, 'HH:mm');
-      localHoraFim = formatInTimeZone(`1970-01-01T${agendamento.hora_fim}Z`, userTimeZone, 'HH:mm');
+      if (inicio) {
+        localHoraInicio = formatInTimeZone(inicio, userTimeZone, 'HH:mm');
+      }
+      if (fim) {
+        localHoraFim = formatInTimeZone(fim, userTimeZone, 'HH:mm');
+      }
     } catch (timezoneError) {
-      // Fallback para hor√°rios UTC se convers√£o falhar
-      localHoraInicio = agendamento.hora_inicio.substring(0, 5);
-      localHoraFim = agendamento.hora_fim.substring(0, 5);
       if (process.env.NODE_ENV === 'development') {
-        console.warn('Fallback para hor√°rio UTC devido a erro de timezone:', timezoneError);
+        console.warn('Fallback para hor·rio devido a erro de timezone:', timezoneError);
       }
     }
 
@@ -140,14 +128,14 @@ const Agendamentos = () => {
     <>
       <Helmet>
         <title>Agendamentos - IA Recorder</title>
-        <meta name="description" content="Gerencie e configure grava√ß√µes autom√°ticas para suas r√°dios." />
+        <meta name="description" content="Gerencie e configure gravaÁıes autom·ticas para suas r·dios." />
       </Helmet>
       <div className="min-h-screen p-6">
         <div className="max-w-6xl mx-auto">
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8 flex justify-between items-center">
             <div>
               <h1 className="text-4xl font-bold gradient-text mb-2">Agendamentos</h1>
-              <p className="text-slate-400 text-lg">Configure grava√ß√µes recorrentes para suas r√°dios</p>
+              <p className="text-slate-400 text-lg">Configure gravaÁıes recorrentes para suas r·dios</p>
             </div>
             <Button onClick={handleAddNew} className="btn btn-primary">
               <Plus className="w-5 h-5 mr-2"/>
@@ -164,7 +152,7 @@ const Agendamentos = () => {
               {loading ? (
                 <div className="flex justify-center items-center h-48"><Loader className="w-8 h-8 animate-spin text-cyan-400" /></div>
               ) : agendamentos.length === 0 ? (
-                <div className="text-center py-12"><Calendar className="w-16 h-16 text-slate-600 mx-auto mb-4" /><p className="text-slate-400 text-lg">Nenhum agendamento criado</p><p className="text-slate-500">Clique em "Novo Agendamento" para come√ßar.</p></div>
+                <div className="text-center py-12"><Calendar className="w-16 h-16 text-slate-600 mx-auto mb-4" /><p className="text-slate-400 text-lg">Nenhum agendamento criado</p><p className="text-slate-500">Clique em "Novo Agendamento" para comeÁar.</p></div>
               ) : (
                 <div className="space-y-4 max-h-[60vh] overflow-y-auto">
                   {agendamentos.map((agendamento, index) => {
@@ -174,7 +162,7 @@ const Agendamentos = () => {
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-3 mb-2">
-                              <h3 className="font-semibold text-white">{agendamento.radios?.nome || 'R√°dio desconhecida'}</h3>
+                              <h3 className="font-semibold text-white">{agendamento.radios?.nome || 'R·dio desconhecida'}</h3>
                             <span className={`flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusInfo.className}`}>
                               {statusInfo.icon}
                               {statusInfo.text}
@@ -196,28 +184,24 @@ const Agendamentos = () => {
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Voc√™ tem certeza?</AlertDialogTitle>
+                                <AlertDialogTitle>VocÍ tem certeza?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Esta a√ß√£o √© irrevers√≠vel. Todas as grava√ß√µes associadas a este agendamento tamb√©m ser√£o exclu√≠das permanentemente.
+                                  Esta aÁ„o È irreversÌvel e excluir· o agendamento.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDelete(agendamento.id)}>
-                                  Sim, Excluir
+                                <AlertDialogAction onClick={() => handleDelete(agendamento.id)} disabled={isDeleting}>
+                                  {isDeleting ? 'Excluindo...' : 'Excluir'}
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
                         </div>
                       </div>
-                      {agendamento.detalhes_erro && (
-                        <div className="w-full mt-2 p-2 bg-yellow-900/50 border-l-4 border-yellow-500 text-yellow-300 text-xs">
-                          <strong>Detalhe:</strong> {agendamento.detalhes_erro}
-                        </div>
-                      )}
                     </motion.div>
-                  )})}
+                  );
+                  })}
                 </div>
               )}
             </motion.div>

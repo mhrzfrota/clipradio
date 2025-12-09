@@ -122,6 +122,13 @@ class ApiClient {
     return this.request(`/gravacoes/${id}`);
   }
 
+  async createGravacao(data) {
+    return this.request('/gravacoes', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   async deleteGravacao(id) {
     return this.request(`/gravacoes/${id}`, {
       method: 'DELETE',
