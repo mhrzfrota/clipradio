@@ -3,21 +3,36 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO
 from config import Config
+from sqlalchemy.exc import OperationalError
+import time
+
 
 db = SQLAlchemy()
 socketio = SocketIO(cors_allowed_origins="*", async_mode='eventlet')
+
+
+def wait_for_db(max_tries=30, delay=2):
+    """Espera o banco responder antes de iniciar o scheduler."""
+    for _ in range(max_tries):
+        try:
+            db.session.execute(db.text('SELECT 1'))
+            return
+        except OperationalError:
+            time.sleep(delay)
+    raise RuntimeError("Banco n„o respondeu a tempo")
+
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     Config.init_app(app)
     
-    # Inicializar extens√µes
+    # Inicializar extensıes
     db.init_app(app)
     CORS(app)
     socketio.init_app(app)
     
-    # Importar modelos (ap√≥s db.init_app)
+    # Importar modelos (apÛs db.init_app)
     with app.app_context():
         from models.user import User
         from models.radio import Radio
@@ -40,7 +55,7 @@ def create_app():
     @app.route('/api/health')
     def health():
         try:
-            # Testar conex√£o com banco
+            # Testar conex„o com banco
             db.session.execute(db.text('SELECT 1'))
             return jsonify({'status': 'ok', 'database': 'connected'})
         except Exception as e:
@@ -49,6 +64,7 @@ def create_app():
     # Inicializar scheduler
     from services.scheduler_service import init_scheduler
     with app.app_context():
+        wait_for_db()
         init_scheduler()
     
     @app.errorhandler(404)
