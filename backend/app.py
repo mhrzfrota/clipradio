@@ -52,6 +52,15 @@ def create_app():
         from models.agendamento import Agendamento
         from models.tag import Tag
         from models.clip import Clip
+        from models.gravacao_tag import gravacao_tags
+        
+        # Garantir que todas as tabelas existam antes de receber requisições
+        try:
+            db.create_all()
+            app.logger.info("Tabelas verificadas/criadas com sucesso.")
+        except Exception as e:
+            app.logger.exception("Falha ao criar/verificar tabelas do banco.")
+            raise
     
     # Registrar blueprints
     from routes import auth, radios, gravacoes, agendamentos, tags, recording, files
@@ -69,8 +78,11 @@ def create_app():
         try:
             # Testar conexao com banco
             db.session.execute(db.text('SELECT 1'))
+            # Validar se a tabela de usuarios estДЃ acessГ­vel (evita 500 silenciosos)
+            db.session.execute(db.text('SELECT 1 FROM usuarios LIMIT 1'))
             return jsonify({'status': 'ok', 'database': 'connected'})
         except Exception as e:
+            app.logger.exception("Health check falhou")
             return jsonify({'status': 'error', 'database': 'disconnected', 'error': str(e)}), 500
     
     # Inicializar scheduler (aguardar banco estar pronto)

@@ -1,4 +1,5 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from app import db
 from models.user import User
 from utils.jwt_utils import create_token, token_required
@@ -7,31 +8,50 @@ bp = Blueprint('auth', __name__)
 
 @bp.route('/register', methods=['POST'])
 def register():
-    data = request.get_json()
+    data = request.get_json() or {}
     
     if not data.get('email') or not data.get('password'):
         return jsonify({'error': 'Email and password required'}), 400
     
-    if User.query.filter_by(email=data['email']).first():
-        return jsonify({'error': 'Email already exists'}), 409
+    try:
+        if User.query.filter_by(email=data['email']).first():
+            return jsonify({'error': 'Email already exists'}), 409
+    except SQLAlchemyError as e:
+        current_app.logger.exception("Erro ao verificar existência do usuário")
+        db.session.rollback()
+        return jsonify({'error': 'Database unavailable. Please try again.'}), 500
     
     user = User(email=data['email'], nome=data.get('nome'))
     user.set_password(data['password'])
     
-    db.session.add(user)
-    db.session.commit()
+    try:
+        db.session.add(user)
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({'error': 'Email already exists'}), 409
+    except SQLAlchemyError as e:
+        current_app.logger.exception("Erro ao registrar usuário")
+        db.session.rollback()
+        return jsonify({'error': 'Database error while creating user'}), 500
     
     token = create_token(user.id)
     return jsonify({'user': user.to_dict(), 'token': token}), 201
 
 @bp.route('/login', methods=['POST'])
 def login():
-    data = request.get_json()
+    data = request.get_json() or {}
     
     if not data.get('email') or not data.get('password'):
         return jsonify({'error': 'Email and password required'}), 400
     
-    user = User.query.filter_by(email=data.get('email')).first()
+    try:
+        user = User.query.filter_by(email=data.get('email')).first()
+    except SQLAlchemyError:
+        current_app.logger.exception("Erro ao buscar usuário para login")
+        db.session.rollback()
+        return jsonify({'error': 'Database unavailable. Please try again.'}), 500
+    
     if not user or not user.check_password(data.get('password', '')):
         return jsonify({'error': 'Invalid credentials'}), 401
     
@@ -60,4 +80,3 @@ def get_me():
 @token_required
 def logout():
     return jsonify({'message': 'Logged out'}), 200
-
