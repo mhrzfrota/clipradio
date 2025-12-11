@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useNavigate, Link } from 'react-router-dom';
@@ -33,7 +32,7 @@ const Cadastro = () => {
     if (!error) {
       toast({
         title: 'Cadastro realizado!',
-        description: 'Conta criada com sucesso. Voc? j? pode fazer login.',
+        description: 'Conta criada com sucesso. Você já pode fazer login.',
         duration: 6000,
       });
       navigate('/login');
@@ -55,7 +54,7 @@ const Cadastro = () => {
             Criar Nova Conta
           </h1>
           <p className="text-slate-400">
-            Preencha os dados para come?ar a gravar.
+            Preencha os dados para começar a gravar.
           </p>
         </div>
 
@@ -84,7 +83,7 @@ const Cadastro = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="input"
-              placeholder="******** (m?nimo 6 caracteres)"
+              placeholder="******** (mínimo 6 caracteres)"
               required
             />
           </div>
@@ -101,10 +100,10 @@ const Cadastro = () => {
 
         <div className="mt-6 text-center">
           <p className="text-slate-400">
-            J? tem uma conta?
+            Já tem uma conta?
             <Link to="/login">
               <button className="font-semibold text-cyan-400 hover:text-cyan-300 ml-2 focus:outline-none">
-                Fa?a login
+                Faça login
               </button>
             </Link>
           </p>
