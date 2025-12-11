@@ -21,7 +21,8 @@ def register():
         db.session.rollback()
         return jsonify({'error': 'Database unavailable. Please try again.'}), 500
     
-    user = User(email=data['email'], nome=data.get('nome'))
+    nome = (data.get('nome') or data['email'].split('@')[0] or '').strip()[:255]
+    user = User(email=data['email'], nome=nome)
     user.set_password(data['password'])
     
     try:
@@ -33,7 +34,7 @@ def register():
     except SQLAlchemyError as e:
         current_app.logger.exception("Erro ao registrar usuário")
         db.session.rollback()
-        return jsonify({'error': 'Database error while creating user'}), 500
+        return jsonify({'error': 'Database error while creating user', 'detail': str(e)}), 500
     
     token = create_token(user.id)
     return jsonify({'user': user.to_dict(), 'token': token}), 201
