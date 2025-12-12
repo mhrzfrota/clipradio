@@ -1,6 +1,6 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { Radio, Globe, Plus, Edit, Trash2, Star, StarOff, Loader, MapPin, Play, Pause } from 'lucide-react'
+import { Radio, Globe, Plus, Edit, Trash2, Star, StarOff, Loader, MapPin, Play, Pause, CheckCircle, AlertCircle } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { Button } from '@/components/ui/button'
 import apiClient from '@/lib/apiClient'
@@ -21,12 +21,15 @@ const CadastroRadios = () => {
   const [saving, setSaving] = useState(false)
   const [currentRadioId, setCurrentRadioId] = useState(null)
   const [isBuffering, setIsBuffering] = useState(false)
+  const [streamStatus, setStreamStatus] = useState({ state: 'idle', message: '' })
   const audioRef = useRef(null)
+  const validationAudioRef = useRef(null)
   const { toast } = useToast()
 
   const resetForm = useCallback(() => {
     setFormData({ nome: '', stream_url: '', cidade: '', estado: '', favorita: false })
     setEditingId(null)
+    setStreamStatus({ state: 'idle', message: '' })
   }, [])
 
   const fetchRadios = useCallback(async () => {
@@ -44,11 +47,69 @@ const CadastroRadios = () => {
     fetchRadios()
   }, [fetchRadios])
 
+  useEffect(() => {
+    const url = formData.stream_url.trim()
+    if (!url) {
+      setStreamStatus({ state: 'idle', message: '' })
+      return
+    }
+
+    let cancelled = false
+    const audio = new Audio()
+    validationAudioRef.current = audio
+    let timeoutId
+
+    function cleanup() {
+      audio.pause()
+      audio.src = ''
+      audio.removeEventListener('canplay', handleCanPlay)
+      audio.removeEventListener('loadedmetadata', handleCanPlay)
+      audio.removeEventListener('error', handleError)
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+
+    function handleCanPlay() {
+      if (cancelled) return
+      setStreamStatus({ state: 'valid', message: 'Stream válido para agendamentos e gravações.' })
+      cleanup()
+    }
+
+    function handleError() {
+      if (cancelled) return
+      setStreamStatus({ state: 'error', message: 'Não foi possível validar este stream.' })
+      cleanup()
+    }
+
+    setStreamStatus({ state: 'loading', message: 'Validando stream...' })
+
+    timeoutId = setTimeout(() => {
+      if (cancelled) return
+      setStreamStatus({ state: 'error', message: 'Tempo esgotado ao validar o stream.' })
+      cleanup()
+    }, 8000)
+
+    audio.addEventListener('canplay', handleCanPlay)
+    audio.addEventListener('loadedmetadata', handleCanPlay)
+    audio.addEventListener('error', handleError)
+    audio.src = url
+    audio.load()
+
+    return () => {
+      cancelled = true
+      cleanup()
+    }
+  }, [formData.stream_url])
+
   const handleSubmit = async (e) => {
     e.preventDefault()
 
     if (!formData.nome || !formData.stream_url || !formData.cidade || !formData.estado) {
       toast({ title: 'Erro', description: 'Todos os campos são obrigatórios', variant: 'destructive' })
+      return
+    }
+
+    if (streamStatus.state === 'error') {
+      toast({ title: 'URL inválida', description: 'Ajuste a URL do stream antes de salvar.', variant: 'destructive' })
       return
     }
 
@@ -97,7 +158,7 @@ const CadastroRadios = () => {
       await apiClient.updateRadio(radio.id, { favorita: updated.favorita })
       setRadios((prev) => prev.map((r) => (r.id === radio.id ? updated : r)))
       toast({
-        title: updated.favorita ? 'Adicionada aos Favoritos' : 'Removida dos Favoritos',
+        title: updated.favorita ? 'Adicionada aos favoritos' : 'Removida dos favoritos',
         description: `${radio.nome} foi ${updated.favorita ? 'marcada como favorita' : 'desmarcada'}.`,
       })
     } catch (error) {
@@ -113,7 +174,11 @@ const CadastroRadios = () => {
     const handleWaiting = () => setIsBuffering(true)
     const handleError = () => {
       setIsBuffering(false)
-      toast({ title: 'Erro ao reproduzir', description: 'Não foi possível tocar o stream da rádio.', variant: 'destructive' })
+      toast({
+        title: 'Erro ao reproduzir',
+        description: 'Não foi possível tocar o stream da rádio.',
+        variant: 'destructive',
+      })
       setCurrentRadioId(null)
     }
 
@@ -165,6 +230,19 @@ const CadastroRadios = () => {
 
   const isPlaying = (id) => currentRadioId === id && audioRef.current && !audioRef.current.paused
 
+  const renderStreamStatusIcon = () => {
+    if (streamStatus.state === 'loading') {
+      return <Loader className="w-4 h-4 text-cyan-400 animate-spin" />
+    }
+    if (streamStatus.state === 'valid') {
+      return <CheckCircle className="w-4 h-4 text-emerald-400" />
+    }
+    if (streamStatus.state === 'error') {
+      return <AlertCircle className="w-4 h-4 text-red-400" />
+    }
+    return null
+  }
+
   return (
     <div className="min-h-screen p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
@@ -194,11 +272,28 @@ const CadastroRadios = () => {
                   </div>
                   <div>
                     <label className="block text-sm text-slate-400 mb-1">URL do Stream</label>
-                    <Input
-                      value={formData.stream_url}
-                      onChange={(e) => setFormData({ ...formData, stream_url: e.target.value })}
-                      placeholder="https://stream.minharadio.com/stream"
-                    />
+                    <div className="relative">
+                      <Input
+                        className="pr-10"
+                        value={formData.stream_url}
+                        onChange={(e) => setFormData({ ...formData, stream_url: e.target.value })}
+                        placeholder="https://stream.minharadio.com/stream"
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        {renderStreamStatusIcon()}
+                      </div>
+                    </div>
+                    {streamStatus.state === 'error' && (
+                      <p className="text-xs text-red-400 mt-1">{streamStatus.message}</p>
+                    )}
+                    {streamStatus.state === 'valid' && (
+                      <p className="text-xs text-emerald-400 mt-1">
+                        Stream reconhecido e pronto para agendamentos ou gravações.
+                      </p>
+                    )}
+                    {streamStatus.state === 'loading' && (
+                      <p className="text-xs text-slate-400 mt-1">Validando stream...</p>
+                    )}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -268,31 +363,48 @@ const CadastroRadios = () => {
                     <Loader className="w-10 h-10 animate-spin text-cyan-400" />
                   </div>
                 ) : radios.length === 0 ? (
-                  <div className="text-center py-12 text-slate-400">
-                    Nenhuma rádio cadastrada ainda.
-                  </div>
+                  <div className="text-center py-12 text-slate-400">Nenhuma rádio cadastrada ainda.</div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {radios.map((radio) => (
-                      <div key={radio.id} className="p-4 bg-slate-900/40 border border-slate-800 rounded-lg flex flex-col gap-3">
+                      <div
+                        key={radio.id}
+                        className="p-4 bg-slate-900/40 border border-slate-800 rounded-lg flex flex-col gap-3"
+                      >
                         <div className="flex items-center justify-between">
                           <div>
                             <h3 className="text-lg font-semibold text-white">{radio.nome}</h3>
                             <p className="text-sm text-slate-400 break-all">{radio.stream_url}</p>
                           </div>
-                          <Button variant="ghost" size="icon" onClick={() => toggleFavorite(radio)} className="text-yellow-400">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => toggleFavorite(radio)}
+                            className="text-yellow-400"
+                          >
                             {radio.favorita ? <Star className="w-5 h-5" /> : <StarOff className="w-5 h-5" />}
                           </Button>
                         </div>
                         <div className="flex items-center gap-4 text-sm text-slate-400">
-                          <span className="flex items-center gap-1"><Globe className="w-4 h-4" />{radio.cidade || '--'}</span>
-                          <span className="flex items-center gap-1"><MapPin className="w-4 h-4" />{radio.estado || '--'}</span>
+                          <span className="flex items-center gap-1">
+                            <Globe className="w-4 h-4" />
+                            {radio.cidade || '--'}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-4 h-4" />
+                            {radio.estado || '--'}
+                          </span>
                         </div>
                         <div className="flex flex-wrap gap-2 items-center">
                           <Button size="sm" variant="outline" onClick={() => handleEdit(radio)}>
                             <Edit className="w-4 h-4 mr-2" /> Editar
                           </Button>
-                          <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(radio.id)}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive"
+                            onClick={() => handleDelete(radio.id)}
+                          >
                             <Trash2 className="w-4 h-4 mr-2" /> Excluir
                           </Button>
                           <Button
@@ -307,7 +419,8 @@ const CadastroRadios = () => {
                               </>
                             ) : (
                               <>
-                                <Play className="w-4 h-4" /> {isBuffering && currentRadioId === radio.id ? 'Carregando...' : 'Ouvir'}
+                                <Play className="w-4 h-4" />{' '}
+                                {isBuffering && currentRadioId === radio.id ? 'Carregando...' : 'Ouvir'}
                               </>
                             )}
                           </Button>
