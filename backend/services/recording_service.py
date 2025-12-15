@@ -5,7 +5,6 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from flask import current_app
-
 from app import db
 from config import Config
 from models.gravacao import Gravacao
@@ -64,8 +63,10 @@ def start_recording(gravacao, *, duration_seconds=None, agendamento=None, block=
     gravacao.arquivo_url = f"/api/files/audio/{filename}"
     db.session.commit()
 
+    # Guardar stderr para inspecionar falhas do ffmpeg (evita arquivo 0 bytes silencioso)
+    ffmpeg_process = None
     try:
-        process = subprocess.Popen(
+        ffmpeg_process = subprocess.Popen(
             [
                 'ffmpeg',
                 '-nostdin',
@@ -81,7 +82,7 @@ def start_recording(gravacao, *, duration_seconds=None, agendamento=None, block=
                 filepath,
             ],
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
         )
     except Exception as exc:
         _finalizar_gravacao(gravacao, 'erro', filepath, duration_seconds, agendamento)
@@ -101,10 +102,33 @@ def start_recording(gravacao, *, duration_seconds=None, agendamento=None, block=
         else:
             ctx = None
         try:
-            return_code = process.wait()
-            if return_code == 0 and os.path.exists(filepath):
+            return_code = ffmpeg_process.wait()
+            stderr_output = b''
+            try:
+                if ffmpeg_process.stderr:
+                    stderr_output = ffmpeg_process.stderr.read()
+            except Exception:
+                pass
+
+            file_exists = filepath and os.path.exists(filepath)
+            file_size = os.path.getsize(filepath) if file_exists else 0
+            min_ok_bytes = 1024  # ~1KB para considerar arquivo válido
+            file_ok = file_exists and file_size >= min_ok_bytes
+
+            if return_code == 0 and file_ok:
                 _finalizar_gravacao(gravacao, 'concluido', filepath, duration_seconds, agendamento)
             else:
+                # Logar erro para depurar streams que nÇ¬o gravam
+                msg = (
+                    f"ffmpeg failed for gravacao {gravacao.id} "
+                    f"(return_code={return_code}, exists={file_exists}, size={file_size})"
+                )
+                try:
+                    if stderr_output:
+                        msg += f" stderr={stderr_output.decode(errors='ignore')[:2000]}"
+                    current_app.logger.error(msg)
+                except Exception:
+                    pass
                 _finalizar_gravacao(gravacao, 'erro', filepath, duration_seconds, agendamento)
         except Exception:
             _finalizar_gravacao(gravacao, 'erro', filepath, duration_seconds, agendamento)
