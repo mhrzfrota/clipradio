@@ -2,7 +2,7 @@
 import React from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LogOut, User, LayoutDashboard, Radio, Calendar, FileText, Mic, Tag, Activity } from 'lucide-react';
+import { LogOut, User, LayoutDashboard, Radio, Calendar, FileText, Mic, Tag } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/Logo';
@@ -14,7 +14,6 @@ const navItems = [
   { name: 'Gravações', path: '/gravacoes', icon: FileText },
   { name: 'Gravar Manual', path: '/gravador-manual', icon: Mic },
   { name: 'Tags', path: '/tags', icon: Tag },
-  { name: 'Status', path: '/status', icon: Activity },
 ];
 
 const Navbar = () => {

@@ -26,7 +26,7 @@ function App() {
   return (
     <>
       <Helmet>
-        <title>Gestor de Rádios - IA Recorder</title>
+        <title>Gestor de Rádios</title>
         <meta
           name="description"
           content="Sistema avançado de gerenciamento de rádios com gravação automática e agendamento inteligente"
@@ -66,7 +66,7 @@ function App() {
         />
 
         <footer className="fixed bottom-4 right-6 text-xs text-slate-200 font-light z-50 pointer-events-none">
-          By MSL Estratégia - Comunicação & Marketing
+          MSL Estratégia - Comunicação & Marketing
         </footer>
       </div>
     </>

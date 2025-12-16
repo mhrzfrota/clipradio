@@ -184,7 +184,7 @@ const PodcastDetail = ({ setGlobalAudioTrack }) => {
   return (
     <>
       <Helmet>
-        <title>{series?.title || 'Série de Podcast'} - IA Recorder</title>
+        <title>{series?.title || 'Série de Podcast'} </title>
         <meta name="description" content={series?.description || 'Detalhes e episódios da série de podcast.'} />
       </Helmet>
       <div className="p-4 md:p-6 max-w-7xl mx-auto text-white">

@@ -154,7 +154,7 @@ const AgentesIA = () => {
   return (
     <>
       <Helmet>
-        <title>Agentes de IA - IA Recorder</title>
+        <title>Agentes de IA</title>
         <meta name="description" content="Crie e gerencie agentes de IA para gerar conteúdo de podcast automaticamente." />
       </Helmet>
       <div className="p-4 md:p-6 space-y-8 max-w-7xl mx-auto">

@@ -409,7 +409,6 @@ const CadastroRadios = () => {
                           </Button>
                           <Button
                             size="sm"
-                            variant="secondary"
                             onClick={() => handlePlayPause(radio)}
                             className="ml-auto flex items-center gap-2"
                           >

@@ -115,7 +115,7 @@ const Podcasts = () => {
   return (
     <>
       <Helmet>
-        <title>Séries de Podcast - IA Recorder</title>
+        <title>Séries de Podcast</title>
         <meta name="description" content="Gerencie suas séries de podcasts gerados por IA." />
       </Helmet>
       <div className="p-4 md:p-6 space-y-8 max-w-7xl mx-auto">

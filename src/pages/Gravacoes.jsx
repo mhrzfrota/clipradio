@@ -276,7 +276,7 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
   return (
     <>
       <Helmet>
-        <title>Gravações - IA Recorder</title>
+        <title></title>
         <meta name="description" content="Visualize e gerencie suas gravações." />
       </Helmet>
       <div className="p-6 max-w-7xl mx-auto">
@@ -333,4 +333,5 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
   );
 };
 
-export default Gravacoes;
+export default Gravacoes;
+

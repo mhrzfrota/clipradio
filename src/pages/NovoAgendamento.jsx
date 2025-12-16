@@ -13,7 +13,7 @@ const NovoAgendamento = () => {
   return (
     <>
       <Helmet>
-        <title>Novo Agendamento - IA Recorder</title>
+        <title>Novo Agendamento</title>
         <meta name="description" content="Crie um novo agendamento de gravação para uma de suas rádios." />
       </Helmet>
       <div className="min-h-screen p-6 flex justify-center items-center">

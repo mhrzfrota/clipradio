@@ -73,7 +73,7 @@ const Historico = ({ setGlobalAudioTrack }) => {
   return (
     <>
       <Helmet>
-        <title>Histórico de Gravações - IA Recorder</title>
+        <title>Histórico de Gravações</title>
         <meta name="description" content="Acesse todo o seu histórico de gravações concluídas." />
       </Helmet>
       <div className="p-6 max-w-7xl mx-auto space-y-8">

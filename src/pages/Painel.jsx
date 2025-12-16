@@ -170,7 +170,7 @@ import React, { useState, useEffect, useCallback } from 'react';
       return (
         <>
           <Helmet>
-            <title>Painel de Rádios - IA Recorder</title>
+            <title>Painel de Rádios </title>
             <meta name="description" content="Controle todas as suas rádios em um só lugar." />
           </Helmet>
           <div className="p-4 md:p-6 max-w-full mx-auto">

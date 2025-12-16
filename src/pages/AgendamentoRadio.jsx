@@ -14,7 +14,7 @@ export default function AgendamentoRadio() {
   return (
     <>
       <Helmet>
-        <title>Editar Agendamento - IA Recorder</title>
+        <title>Editar Agendamento</title>
         <meta name="description" content="Edite um agendamento de rádio existente." />
       </Helmet>
       <motion.div

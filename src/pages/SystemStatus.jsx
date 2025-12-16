@@ -67,7 +67,7 @@ const SystemStatus = () => {
   return (
     <>
       <Helmet>
-        <title>Status do Sistema - IA Recorder</title>
+        <title>Status do Sistema</title>
         <meta name="description" content="Verifique o status dos serviços do IA Recorder." />
       </Helmet>
       <motion.div

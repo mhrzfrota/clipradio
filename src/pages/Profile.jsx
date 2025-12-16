@@ -22,7 +22,7 @@ const Profile = () => {
   return (
     <>
       <Helmet>
-        <title>Meu Perfil - IA Recorder</title>
+        <title>Meu Perfil</title>
         <meta name="description" content="Dados da sua conta." />
       </Helmet>
       <div className="p-4 md:p-6 max-w-4xl mx-auto text-white">
@@ -64,4 +64,5 @@ const Profile = () => {
   );
 };
 
-export default Profile;
+export default Profile;
+

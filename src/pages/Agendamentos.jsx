@@ -127,7 +127,7 @@ const Agendamentos = () => {
   return (
     <>
       <Helmet>
-        <title>Agendamentos - IA Recorder</title>
+        <title>Agendamentos</title>
         <meta name="description" content="Gerencie e configure gravações automáticas para suas rádios." />
       </Helmet>
       <div className="min-h-screen p-6">
@@ -212,4 +212,5 @@ const Agendamentos = () => {
   );
 };
 
-export default Agendamentos;
+export default Agendamentos;
+
