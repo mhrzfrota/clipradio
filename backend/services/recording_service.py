@@ -141,7 +141,7 @@ def start_recording(gravacao, *, duration_seconds=None, agendamento=None, block=
     else:
         threading.Thread(target=wait_and_finalize, daemon=True).start()
 
-    return process
+    return ffmpeg_process
 
 
 def stop_recording(gravacao):
