@@ -7,16 +7,20 @@ from datetime import datetime
 
 bp = Blueprint('gravacoes', __name__)
 
-def get_user_id():
+def get_user_ctx():
     token = flask_request.headers.get('Authorization', '').replace('Bearer ', '')
-    payload = decode_token(token)
-    return payload['user_id'] if payload else None
+    payload = decode_token(token) or {}
+    return {
+        'user_id': payload.get('user_id'),
+        'is_admin': payload.get('is_admin', False)
+    }
 
 @bp.route('', methods=['POST'])
 @token_required
 def create_gravacao():
     """Cria um registro de gravação para o usuário autenticado"""
-    user_id = get_user_id()
+    ctx = get_user_ctx()
+    user_id = ctx.get('user_id')
     data = request.get_json() or {}
 
     radio_id = data.get('radio_id')
@@ -42,8 +46,13 @@ def create_gravacao():
 @bp.route('', methods=['GET'])
 @token_required
 def get_gravacoes():
-    user_id = get_user_id()
-    query = Gravacao.query.filter_by(user_id=user_id)
+    ctx = get_user_ctx()
+    user_id = ctx.get('user_id')
+    is_admin = ctx.get('is_admin', False)
+
+    query = Gravacao.query
+    if not is_admin:
+        query = query.filter_by(user_id=user_id)
     
     # Filtros
     radio_id = request.args.get('radio_id')
@@ -77,8 +86,10 @@ def get_gravacoes():
 @bp.route('/<gravacao_id>', methods=['GET'])
 @token_required
 def get_gravacao(gravacao_id):
-    user_id = get_user_id()
-    gravacao = Gravacao.query.filter_by(id=gravacao_id, user_id=user_id).first()
+    ctx = get_user_ctx()
+    user_id = ctx.get('user_id')
+    is_admin = ctx.get('is_admin', False)
+    gravacao = Gravacao.query.filter_by(id=gravacao_id).first() if is_admin else Gravacao.query.filter_by(id=gravacao_id, user_id=user_id).first()
     if not gravacao:
         return jsonify({'error': 'Gravacao not found'}), 404
     return jsonify(gravacao.to_dict(include_radio=True)), 200
@@ -86,8 +97,10 @@ def get_gravacao(gravacao_id):
 @bp.route('/<gravacao_id>', methods=['DELETE'])
 @token_required
 def delete_gravacao(gravacao_id):
-    user_id = get_user_id()
-    gravacao = Gravacao.query.filter_by(id=gravacao_id, user_id=user_id).first()
+    ctx = get_user_ctx()
+    user_id = ctx.get('user_id')
+    is_admin = ctx.get('is_admin', False)
+    gravacao = Gravacao.query.filter_by(id=gravacao_id).first() if is_admin else Gravacao.query.filter_by(id=gravacao_id, user_id=user_id).first()
     if not gravacao:
         return jsonify({'error': 'Gravacao not found'}), 404
     
@@ -103,17 +116,19 @@ def delete_gravacao(gravacao_id):
 @bp.route('/batch-delete', methods=['POST'])
 @token_required
 def batch_delete():
-    user_id = get_user_id()
+    ctx = get_user_ctx()
+    user_id = ctx.get('user_id')
+    is_admin = ctx.get('is_admin', False)
     data = request.get_json()
     gravacao_ids = data.get('gravacao_ids', [])
     
     if not gravacao_ids:
         return jsonify({'error': 'No gravacao IDs provided'}), 400
     
-    gravacoes = Gravacao.query.filter(
-        Gravacao.id.in_(gravacao_ids),
-        Gravacao.user_id == user_id
-    ).all()
+    gravacoes = Gravacao.query.filter(Gravacao.id.in_(gravacao_ids))
+    if not is_admin:
+        gravacoes = gravacoes.filter(Gravacao.user_id == user_id)
+    gravacoes = gravacoes.all()
     
     for gravacao in gravacoes:
         db.session.delete(gravacao)
@@ -129,8 +144,10 @@ def batch_delete():
 @bp.route('/stats', methods=['GET'])
 @token_required
 def get_stats():
-    user_id = get_user_id()
-    gravacoes = Gravacao.query.filter_by(user_id=user_id).all()
+    ctx = get_user_ctx()
+    user_id = ctx.get('user_id')
+    is_admin = ctx.get('is_admin', False)
+    gravacoes = Gravacao.query.all() if is_admin else Gravacao.query.filter_by(user_id=user_id).all()
     
     total = len(gravacoes)
     total_duration = sum(g.duracao_segundos or 0 for g in gravacoes)
@@ -143,4 +160,3 @@ def get_stats():
         'totalSize': total_size,
         'uniqueRadios': unique_radios
     }), 200
-

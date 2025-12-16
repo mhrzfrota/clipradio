@@ -11,6 +11,7 @@ class User(db.Model):
     senha_hash = db.Column(db.String(255), nullable=False)
     nome = db.Column(db.String(255))
     ativo = db.Column(db.Boolean, default=True)
+    is_admin = db.Column(db.Boolean, default=False, nullable=False)
     criado_em = db.Column(db.DateTime, default=datetime.utcnow)
     atualizado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -32,6 +33,6 @@ class User(db.Model):
             'email': self.email,
             'nome': self.nome,
             'ativo': self.ativo,
+            'is_admin': self.is_admin,
             'criado_em': self.criado_em.isoformat() if self.criado_em else None
         }
-

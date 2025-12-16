@@ -6,23 +6,34 @@ from flask import request as flask_request
 
 bp = Blueprint('radios', __name__)
 
-def get_user_id():
+def get_user_ctx():
     token = flask_request.headers.get('Authorization', '').replace('Bearer ', '')
-    payload = decode_token(token)
-    return payload['user_id'] if payload else None
+    payload = decode_token(token) or {}
+    return {
+        'user_id': payload.get('user_id'),
+        'is_admin': payload.get('is_admin', False)
+    }
 
 @bp.route('', methods=['GET'])
 @token_required
 def get_radios():
-    user_id = get_user_id()
-    radios = Radio.query.filter_by(user_id=user_id).order_by(Radio.favorita.desc(), Radio.criado_em.desc()).all()
+    ctx = get_user_ctx()
+    user_id = ctx.get('user_id')
+    is_admin = ctx.get('is_admin', False)
+
+    query = Radio.query
+    if not is_admin:
+        query = query.filter_by(user_id=user_id)
+    radios = query.order_by(Radio.favorita.desc(), Radio.criado_em.desc()).all()
     return jsonify([radio.to_dict() for radio in radios]), 200
 
 @bp.route('/<radio_id>', methods=['GET'])
 @token_required
 def get_radio(radio_id):
-    user_id = get_user_id()
-    radio = Radio.query.filter_by(id=radio_id, user_id=user_id).first()
+    ctx = get_user_ctx()
+    user_id = ctx.get('user_id')
+    is_admin = ctx.get('is_admin', False)
+    radio = Radio.query.filter_by(id=radio_id).first() if is_admin else Radio.query.filter_by(id=radio_id, user_id=user_id).first()
     if not radio:
         return jsonify({'error': 'Radio not found'}), 404
     return jsonify(radio.to_dict()), 200
@@ -30,7 +41,8 @@ def get_radio(radio_id):
 @bp.route('', methods=['POST'])
 @token_required
 def create_radio():
-    user_id = get_user_id()
+    ctx = get_user_ctx()
+    user_id = ctx.get('user_id')
     data = request.get_json()
     
     if not data.get('nome') or not data.get('stream_url'):
@@ -57,8 +69,10 @@ def create_radio():
 @bp.route('/<radio_id>', methods=['PUT'])
 @token_required
 def update_radio(radio_id):
-    user_id = get_user_id()
-    radio = Radio.query.filter_by(id=radio_id, user_id=user_id).first()
+    ctx = get_user_ctx()
+    user_id = ctx.get('user_id')
+    is_admin = ctx.get('is_admin', False)
+    radio = Radio.query.filter_by(id=radio_id).first() if is_admin else Radio.query.filter_by(id=radio_id, user_id=user_id).first()
     if not radio:
         return jsonify({'error': 'Radio not found'}), 404
     
@@ -85,8 +99,10 @@ def update_radio(radio_id):
 @bp.route('/<radio_id>', methods=['DELETE'])
 @token_required
 def delete_radio(radio_id):
-    user_id = get_user_id()
-    radio = Radio.query.filter_by(id=radio_id, user_id=user_id).first()
+    ctx = get_user_ctx()
+    user_id = ctx.get('user_id')
+    is_admin = ctx.get('is_admin', False)
+    radio = Radio.query.filter_by(id=radio_id).first() if is_admin else Radio.query.filter_by(id=radio_id, user_id=user_id).first()
     if not radio:
         return jsonify({'error': 'Radio not found'}), 404
     
@@ -98,4 +114,3 @@ def delete_radio(radio_id):
     broadcast_update(f'user_{user_id}', 'radio_deleted', {'id': radio_id})
     
     return jsonify({'message': 'Radio deleted'}), 200
-

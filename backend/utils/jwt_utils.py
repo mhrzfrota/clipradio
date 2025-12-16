@@ -1,12 +1,17 @@
 import jwt
-from datetime import datetime, timedelta
+from datetime import datetime
 from flask import current_app
 from functools import wraps
 from flask import request, jsonify
 
+from models.user import User
+
 def create_token(user_id):
+    """Cria JWT incluindo flag de admin para evitar consultas extras por requisição."""
+    user = User.query.get(user_id)
     payload = {
         'user_id': user_id,
+        'is_admin': bool(user.is_admin) if user else False,
         'exp': datetime.utcnow() + current_app.config['JWT_ACCESS_TOKEN_EXPIRES'],
         'iat': datetime.utcnow()
     }
@@ -15,7 +20,7 @@ def create_token(user_id):
 def decode_token(token):
     try:
         return jwt.decode(token, current_app.config['JWT_SECRET_KEY'], algorithms=['HS256'])
-    except:
+    except Exception:
         return None
 
 def token_required(f):
@@ -29,7 +34,7 @@ def token_required(f):
         if not payload:
             return jsonify({'error': 'Invalid token'}), 401
         
-        request.user_id = payload['user_id']
+        request.user_id = payload.get('user_id')
+        request.is_admin = payload.get('is_admin', False)
         return f(*args, **kwargs)
     return decorated
-

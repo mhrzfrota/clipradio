@@ -7,22 +7,27 @@ from services.recording_service import start_recording, stop_recording
 
 bp = Blueprint('recording', __name__)
 
-def get_user_id():
+def get_user_ctx():
     token = flask_request.headers.get('Authorization', '').replace('Bearer ', '')
-    payload = decode_token(token)
-    return payload['user_id'] if payload else None
+    payload = decode_token(token) or {}
+    return {
+        'user_id': payload.get('user_id'),
+        'is_admin': payload.get('is_admin', False)
+    }
 
 @bp.route('/start', methods=['POST'])
 @token_required
 def start():
-    user_id = get_user_id()
+    ctx = get_user_ctx()
+    user_id = ctx.get('user_id')
+    is_admin = ctx.get('is_admin', False)
     data = request.get_json()
     
     recording_id = data.get('recording_id')
     if not recording_id:
         return jsonify({'error': 'recording_id is required'}), 400
     
-    gravacao = Gravacao.query.filter_by(id=recording_id, user_id=user_id).first()
+    gravacao = Gravacao.query.filter_by(id=recording_id).first() if is_admin else Gravacao.query.filter_by(id=recording_id, user_id=user_id).first()
     if not gravacao:
         return jsonify({'error': 'Gravacao not found'}), 404
     
@@ -35,9 +40,11 @@ def start():
 @bp.route('/stop/<recording_id>', methods=['POST'])
 @token_required
 def stop(recording_id):
-    user_id = get_user_id()
+    ctx = get_user_ctx()
+    user_id = ctx.get('user_id')
+    is_admin = ctx.get('is_admin', False)
     
-    gravacao = Gravacao.query.filter_by(id=recording_id, user_id=user_id).first()
+    gravacao = Gravacao.query.filter_by(id=recording_id).first() if is_admin else Gravacao.query.filter_by(id=recording_id, user_id=user_id).first()
     if not gravacao:
         return jsonify({'error': 'Gravacao not found'}), 404
     
@@ -50,7 +57,9 @@ def stop(recording_id):
 @bp.route('/process-ai', methods=['POST'])
 @token_required
 def process_ai():
-    user_id = get_user_id()
+    ctx = get_user_ctx()
+    user_id = ctx.get('user_id')
+    is_admin = ctx.get('is_admin', False)
     data = request.get_json()
     
     gravacao_id = data.get('gravacao_id')
@@ -59,7 +68,7 @@ def process_ai():
     if not gravacao_id:
         return jsonify({'error': 'gravacao_id is required'}), 400
     
-    gravacao = Gravacao.query.filter_by(id=gravacao_id, user_id=user_id).first()
+    gravacao = Gravacao.query.filter_by(id=gravacao_id).first() if is_admin else Gravacao.query.filter_by(id=gravacao_id, user_id=user_id).first()
     if not gravacao:
         return jsonify({'error': 'Gravacao not found'}), 404
     
@@ -70,4 +79,3 @@ def process_ai():
         return jsonify({'message': 'Processing started', 'result': result}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
