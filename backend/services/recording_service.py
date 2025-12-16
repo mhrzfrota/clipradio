@@ -14,6 +14,28 @@ from services.websocket_service import broadcast_update
 LOCAL_TZ = ZoneInfo("America/Fortaleza")
 MIN_RECORD_SECONDS = 10  # evita gravação zero em caso de input faltando
 
+def _probe_duration_seconds(filepath):
+    """Obtém duração real via ffprobe; retorna None se falhar."""
+    if not filepath or not os.path.exists(filepath):
+        return None
+    try:
+        out = subprocess.check_output(
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                filepath,
+            ],
+            stderr=subprocess.STDOUT,
+        )
+        return int(float(out.strip()))
+    except Exception:
+        return None
+
 
 def _finalizar_gravacao(gravacao, status, filepath=None, duration_seconds=None, agendamento=None):
     """Atualiza status, tamanhos e emite broadcast."""
@@ -23,9 +45,11 @@ def _finalizar_gravacao(gravacao, status, filepath=None, duration_seconds=None, 
     except Exception:
         pass
 
-    if duration_seconds:
-        gravacao.duracao_segundos = duration_seconds
-        gravacao.duracao_minutos = max(1, round(duration_seconds / 60))
+    # Preferir duração real do arquivo, se existir
+    real_duration = duration_seconds or _probe_duration_seconds(filepath)
+    if real_duration:
+        gravacao.duracao_segundos = real_duration
+        gravacao.duracao_minutos = max(1, round(real_duration / 60))
 
     gravacao.status = status
     if agendamento:
