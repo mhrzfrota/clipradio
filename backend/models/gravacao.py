@@ -1,6 +1,9 @@
 from app import db
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import uuid
+
+LOCAL_TZ = ZoneInfo("America/Fortaleza")
 
 class Gravacao(db.Model):
     __tablename__ = 'gravacoes'
@@ -16,8 +19,8 @@ class Gravacao(db.Model):
     duracao_minutos = db.Column(db.Integer, default=0)
     tamanho_mb = db.Column(db.Float, default=0.0)
     batch_id = db.Column(db.String(36))  # Para gravação em massa
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-    atualizado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=lambda: datetime.now(tz=LOCAL_TZ), index=True)
+    atualizado_em = db.Column(db.DateTime, default=lambda: datetime.now(tz=LOCAL_TZ), onupdate=lambda: datetime.now(tz=LOCAL_TZ))
     
     # Relacionamentos
     clips = db.relationship('Clip', backref='gravacao', lazy=True, cascade='all, delete-orphan')
@@ -48,4 +51,3 @@ class Gravacao(db.Model):
             }
         
         return data
-
