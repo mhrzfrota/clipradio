@@ -85,12 +85,18 @@ const GravacaoItem = ({ gravacao, index, isPlaying, onPlay, onStop, setGlobalAud
   };
 
   const statusText = {
-    concluido: 'Concluído',
+    concluido: 'Gravado',
     gravando: 'Gravando',
     erro: 'Erro',
     iniciando: 'Iniciando',
     agendado: 'Agendado',
     processando: 'Processando IA',
+  };
+
+  const tipoLabel = (tipo) => {
+    if (!tipo) return 'Manual';
+    const map = { manual: 'Manual', agendado: 'Agendado', massa: 'Em massa' };
+    return map[tipo] || tipo;
   };
 
   const formatDuration = (seconds) => {
@@ -129,11 +135,11 @@ const GravacaoItem = ({ gravacao, index, isPlaying, onPlay, onStop, setGlobalAud
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
             <FileArchive className="w-4 h-4 text-green-400" />
-            <span>{(gravacao.tamanho_mb || 0).toFixed(2)} MB</span>
+            <span>{Number(gravacao.tamanho_mb || 0).toFixed(2)} MB</span>
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
             <Mic className="w-4 h-4 text-purple-400" />
-            <span>{gravacao.tipo || 'Manual'}</span>
+            <span>{tipoLabel(gravacao.tipo)}</span>
           </div>
         </div>
 
