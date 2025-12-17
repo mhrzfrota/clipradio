@@ -509,117 +509,163 @@ const CadastroRadios = () => {
                     {radios.map((radio) => (
                       <div
                         key={radio.id}
-                        className="p-4 bg-slate-900/40 border border-slate-800 rounded-lg flex flex-col gap-3"
+                        className="group relative bg-gradient-to-br from-slate-900/60 to-slate-900/40 border border-slate-700/60 rounded-xl overflow-hidden hover:border-cyan-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/5"
                       >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h3 className="text-lg font-semibold text-white">{radio.nome}</h3>
-                              {activeRecordingId === radio.id && (
-                                <span className="text-xs font-semibold text-red-300 animate-pulse">Gravando</span>
+                        {/* Header com nome e favorito */}
+                        <div className="p-4 pb-3 border-b border-slate-800/50">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="text-base font-bold text-white truncate">{radio.nome}</h3>
+                                {activeRecordingId === radio.id && (
+                                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/20 border border-red-500/40">
+                                    <CircleDot className="w-2.5 h-2.5 text-red-400 animate-pulse" />
+                                    <span className="text-[10px] font-bold text-red-300 uppercase tracking-wide">Rec</span>
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-500 truncate font-mono">{radio.stream_url}</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => toggleFavorite(radio)}
+                              className="h-8 w-8 flex-shrink-0 hover:bg-yellow-500/10 transition-colors"
+                            >
+                              {radio.favorita ? (
+                                <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                              ) : (
+                                <StarOff className="w-4 h-4 text-slate-500 group-hover:text-yellow-400/50 transition-colors" />
                               )}
-                            </div>
-                            <p className="text-sm text-slate-400 break-all">{radio.stream_url}</p>
+                            </Button>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => toggleFavorite(radio)}
-                            className="text-yellow-400"
-                          >
-                            {radio.favorita ? <Star className="w-5 h-5" /> : <StarOff className="w-5 h-5" />}
-                          </Button>
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-slate-400">
-                        <span className="flex items-center gap-1">
-                          <Globe className="w-4 h-4" />
-                          {radio.cidade || '--'}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <MapPin className="w-4 h-4" />
-                          {radio.estado || '--'}
-                        </span>
-                          {scheduledRadioIds.has(radio.id) && (
-                            <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/40 text-emerald-300 text-[11px] font-semibold">
-                              <Clock className="w-3 h-3" /> Agendado
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-slate-300">
-                          <span className="px-2 py-1 rounded-full bg-slate-800/80 border border-slate-700">
-                            {radio.bitrate_kbps || 128} kbps
-                          </span>
-                          <span className="px-2 py-1 rounded-full bg-slate-800/80 border border-slate-700">
-                            {(radio.output_format || 'mp3').toUpperCase()}
-                          </span>
-                          {activeRecordingId === radio.id && (
-                            <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-red-500/15 border border-red-500/40 text-red-300">
-                              <CircleDot className="w-3 h-3 animate-pulse" /> Gravando
-                            </span>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Button size="sm" variant="outline" onClick={() => handleEdit(radio)} className="h-8 text-xs">
-                            <Edit className="w-3 h-3 mr-1" /> Editar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-destructive h-8 text-xs"
-                            onClick={() => handleDelete(radio.id)}
-                          >
-                            <Trash2 className="w-3 h-3 mr-1" /> Excluir
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant={recordPanelRadioId === radio.id ? 'default' : 'outline'}
-                            onClick={() => toggleRecordPanel(radio.id)}
-                            className="flex items-center gap-1 h-8 text-xs"
-                          >
-                            <CircleDot className="w-3 h-3 text-red-400" />
-                            Gravar
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => handlePlayPause(radio)}
-                            className="flex items-center gap-1 h-8 text-xs"
-                          >
-                            {isPlaying(radio.id) ? (
-                              <>
-                                <Pause className="w-3 h-3" /> Pausar
-                              </>
-                            ) : (
-                              <>
-                                <Play className="w-3 h-3" />
-                                {isBuffering && currentRadioId === radio.id ? 'Carregando...' : 'Ouvir'}
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                        {recordPanelRadioId === radio.id && (
-                          <div className="mt-3 p-3 rounded-lg bg-slate-900/70 border border-slate-800">
-                            <div className="flex items-center justify-between text-xs text-slate-300 mb-2">
-                              <span>1 min</span>
-                              <span>{recordDuration} min</span>
-                              <span>60 min</span>
+
+                        {/* Informações e badges */}
+                        <div className="px-4 py-3 space-y-2">
+                          <div className="flex items-center flex-wrap gap-2">
+                            <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                              <Globe className="w-3.5 h-3.5" />
+                              <span>{radio.cidade || '--'}</span>
                             </div>
-                            <input
-                              type="range"
-                              min="1"
-                              max="60"
-                              step="1"
-                              value={recordDuration}
-                              onChange={(e) => setRecordDuration(Number(e.target.value))}
-                              className="record-slider"
-                            />
-                            <div className="flex justify-end mt-3">
+                            <div className="w-px h-3 bg-slate-700" />
+                            <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                              <MapPin className="w-3.5 h-3.5" />
+                              <span>{radio.estado || '--'}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center flex-wrap gap-1.5">
+                            <span className="px-2 py-0.5 rounded-md bg-slate-800/60 border border-slate-700/50 text-[11px] font-medium text-slate-300">
+                              {radio.bitrate_kbps || 128} kbps
+                            </span>
+                            <span className="px-2 py-0.5 rounded-md bg-slate-800/60 border border-slate-700/50 text-[11px] font-medium text-slate-300">
+                              {(radio.output_format || 'mp3').toUpperCase()}
+                            </span>
+                            {scheduledRadioIds.has(radio.id) && (
+                              <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                                <Clock className="w-3 h-3" />
+                                <span className="text-[11px] font-semibold">Agendado</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Botões de ação */}
+                        <div className="px-4 pb-4 pt-2">
+                          <div className="flex items-center gap-2">
+                            {/* Botão Play/Pause - destaque */}
+                            <Button
+                              size="sm"
+                              onClick={() => handlePlayPause(radio)}
+                              className="flex-1 h-9 bg-cyan-500 hover:bg-cyan-600 text-white font-medium shadow-sm"
+                            >
+                              {isPlaying(radio.id) ? (
+                                <>
+                                  <Pause className="w-3.5 h-3.5 mr-1.5" />
+                                  Pausar
+                                </>
+                              ) : (
+                                <>
+                                  <Play className="w-3.5 h-3.5 mr-1.5" />
+                                  {isBuffering && currentRadioId === radio.id ? 'Carregando...' : 'Ouvir'}
+                                </>
+                              )}
+                            </Button>
+
+                            {/* Botão Gravar */}
+                            <Button
+                              size="sm"
+                              variant={recordPanelRadioId === radio.id ? 'default' : 'outline'}
+                              onClick={() => toggleRecordPanel(radio.id)}
+                              className={`flex-1 h-9 font-medium ${recordPanelRadioId === radio.id ? 'bg-red-500 hover:bg-red-600 text-white border-red-500' : 'border-slate-700 hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400'}`}
+                            >
+                              <CircleDot className="w-3.5 h-3.5 mr-1.5" />
+                              Gravar
+                            </Button>
+                          </div>
+
+                          {/* Botões secundários */}
+                          <div className="flex items-center gap-2 mt-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleEdit(radio)}
+                              className="flex-1 h-8 text-xs text-slate-400 hover:text-white hover:bg-slate-800/60"
+                            >
+                              <Edit className="w-3 h-3 mr-1" />
+                              Editar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDelete(radio.id)}
+                              className="flex-1 h-8 text-xs text-slate-400 hover:text-red-400 hover:bg-red-500/10"
+                            >
+                              <Trash2 className="w-3 h-3 mr-1" />
+                              Excluir
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Painel de gravação */}
+                        {recordPanelRadioId === radio.id && (
+                          <div className="px-4 pb-4 border-t border-slate-800/50 pt-3 bg-slate-950/40">
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
+                                <span>Duração</span>
+                                <span className="text-cyan-400 font-bold">{recordDuration} min</span>
+                              </div>
+                              <input
+                                type="range"
+                                min="1"
+                                max="60"
+                                step="1"
+                                value={recordDuration}
+                                onChange={(e) => setRecordDuration(Number(e.target.value))}
+                                className="record-slider w-full"
+                              />
+                              <div className="flex items-center justify-between text-[10px] text-slate-500">
+                                <span>1 min</span>
+                                <span>60 min</span>
+                              </div>
                               <Button
                                 size="sm"
                                 disabled={startingRecording}
                                 onClick={() => handleStartRecording(radio)}
-                                className="bg-red-500 hover:bg-red-600 text-white"
+                                className="w-full h-9 bg-red-500 hover:bg-red-600 text-white font-semibold"
                               >
-                                {startingRecording ? 'Iniciando...' : 'Iniciar gravacao'}
+                                {startingRecording ? (
+                                  <>
+                                    <Loader className="w-3.5 h-3.5 mr-2 animate-spin" />
+                                    Iniciando...
+                                  </>
+                                ) : (
+                                  <>
+                                    <CircleDot className="w-3.5 h-3.5 mr-2" />
+                                    Iniciar Gravação
+                                  </>
+                                )}
                               </Button>
                             </div>
                           </div>
