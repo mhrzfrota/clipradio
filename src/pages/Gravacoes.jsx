@@ -477,6 +477,21 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
     }
   };
 
+  const getOngoingStatus = (gravacao) => {
+    switch (gravacao.status) {
+      case 'iniciando':
+        return { label: 'Iniciando', className: 'bg-yellow-500/15 border-yellow-500/40 text-yellow-200 animate-pulse' };
+      case 'gravando':
+        return { label: 'Gravando', className: 'bg-red-500/15 border-red-500/40 text-red-200 animate-pulse' };
+      case 'processando':
+        return { label: 'Processando', className: 'bg-indigo-500/15 border-indigo-500/40 text-indigo-200 animate-pulse' };
+      case 'concluido':
+        return { label: 'Concluida', className: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-200' };
+      default:
+        return { label: gravacao.status || 'Desconhecido', className: 'bg-slate-700/40 border-slate-600 text-slate-200' };
+    }
+  };
+
 
 
   const handleDeleteSelected = async () => {
@@ -577,11 +592,8 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
 
   const filteredGravacoes = useMemo(() => [...agAsGravacoes, ...gravacoes], [agAsGravacoes, gravacoes]);
   const ongoingGravacoes = useMemo(
-
-    () => filteredGravacoes.filter((g) => ['gravando', 'iniciando', 'processando'].includes(g.status)),
-
+    () => filteredGravacoes.filter((g) => ['gravando', 'iniciando', 'processando', 'concluido'].includes(g.status)),
     [filteredGravacoes]
-
   );
 
 
@@ -678,53 +690,54 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
 
               <div className="bg-slate-900/80 border border-slate-800 rounded-lg overflow-hidden">
 
-                {ongoingGravacoes.map((gravacao, idx) => (
+                {ongoingGravacoes.map((gravacao, idx) => {
+                  const statusInfo = getOngoingStatus(gravacao);
+                  const canStop = ['gravando', 'iniciando', 'processando'].includes(gravacao.status);
+                  return (
 
-                  <div
-                    key={gravacao.id}
-                    className={`px-4 py-3 flex items-center justify-between ${idx !== ongoingGravacoes.length - 1 ? 'border-b border-slate-800/80' : ''}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex flex-col">
-                        <span className="text-white font-semibold">{gravacao.radios?.nome || 'Radio'}</span>
-                        <span className="text-xs text-slate-400">
-                          Iniciada em {format(new Date(gravacao.criado_em), "d MMM 'as' HH:mm", { locale: ptBR })}
+                    <div
+                      key={gravacao.id}
+                      className={`px-4 py-3 flex items-center justify-between ${idx !== ongoingGravacoes.length - 1 ? 'border-b border-slate-800/80' : ''}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex flex-col">
+                          <span className="text-white font-semibold">{gravacao.radios?.nome || 'Radio'}</span>
+                          <span className="text-xs text-slate-400">
+                            Iniciada em {format(new Date(gravacao.criado_em), "d MMM 'as' HH:mm", { locale: ptBR })}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {canStop && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="h-8 px-3"
+                            onClick={() => handleStopRecording(gravacao)}
+                            disabled={stoppingId === gravacao.id}
+                          >
+                            {stoppingId === gravacao.id ? (
+                              <>
+                                <Loader className="w-3.5 h-3.5 mr-1 animate-spin" />
+                                Parando...
+                              </>
+                            ) : (
+                              <>
+                                <Square className="w-3.5 h-3.5 mr-1" />
+                                Parar
+                              </>
+                            )}
+                          </Button>
+                        )}
+                        <span className={`text-sm px-3 py-1 rounded-full border ${statusInfo.className}`}>
+                          {statusInfo.label}
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="h-8 px-3"
-                        onClick={() => handleStopRecording(gravacao)}
-                        disabled={stoppingId === gravacao.id}
-                      >
-                        {stoppingId === gravacao.id ? (
-                          <>
-                            <Loader className="w-3.5 h-3.5 mr-1 animate-spin" />
-                            Parando...
-                          </>
-                        ) : (
-                          <>
-                            <Square className="w-3.5 h-3.5 mr-1" />
-                            Parar
-                          </>
-                        )}
-                      </Button>
-                      <span
-                        className={`text-sm px-3 py-1 rounded-full border ${
-                          gravacao.status === 'iniciando'
-                            ? 'bg-yellow-500/15 border-yellow-500/40 text-yellow-200 animate-pulse'
-                            : 'bg-red-500/15 border-red-500/40 text-red-200 animate-pulse'
-                        }`}
-                      >
-                        {gravacao.status === 'iniciando' ? 'Iniciando' : 'Gravando'}
-                      </span>
-                    </div>
-                  </div>
 
-                ))}
+                  );
+                })}
+
 
               </div>
 
