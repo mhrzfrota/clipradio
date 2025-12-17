@@ -9,7 +9,9 @@ def get_audio(filename):
     audio_path = os.path.join(current_app.config['STORAGE_PATH'], 'audio', filename)
     if not os.path.exists(audio_path):
         return jsonify({'error': 'File not found'}), 404
-    return send_file(audio_path, mimetype='audio/mpeg')
+    ext = os.path.splitext(filename)[1].lower()
+    mimetype = 'audio/flac' if ext == '.flac' else 'audio/mpeg'
+    return send_file(audio_path, mimetype=mimetype)
 
 @bp.route('/clips/<filename>', methods=['GET'])
 def get_clip(filename):

@@ -13,6 +13,8 @@ from services.websocket_service import broadcast_update
 
 LOCAL_TZ = ZoneInfo("America/Fortaleza")
 MIN_RECORD_SECONDS = 10  # evita gravação zero em caso de input faltando
+ALLOWED_BITRATES = {96, 128}
+ALLOWED_FORMATS = {'mp3', 'flac'}
 
 
 def _get_audio_filepath(gravacao):
@@ -148,6 +150,17 @@ def start_recording(gravacao, *, duration_seconds=None, agendamento=None, block=
     if not radio or not radio.stream_url:
         raise ValueError("Radio not found or stream_url missing")
 
+    try:
+        bitrate_kbps = int(getattr(radio, 'bitrate_kbps', 128))
+    except Exception:
+        bitrate_kbps = 128
+    if bitrate_kbps not in ALLOWED_BITRATES:
+        bitrate_kbps = 128
+
+    output_format = (getattr(radio, 'output_format', 'mp3') or 'mp3').lower()
+    if output_format not in ALLOWED_FORMATS:
+        output_format = 'mp3'
+
     os.makedirs(os.path.join(Config.STORAGE_PATH, 'audio'), exist_ok=True)
 
     # Definir duração com fallback seguro (evita ficar gravando indefinidamente)
@@ -167,7 +180,7 @@ def start_recording(gravacao, *, duration_seconds=None, agendamento=None, block=
     gravacao.duracao_minutos = max(1, round(duration_seconds / 60))
 
     timestamp = datetime.now(tz=LOCAL_TZ).strftime('%Y%m%d_%H%M%S')
-    filename = f"{gravacao.id}_{timestamp}.mp3"
+    filename = f"{gravacao.id}_{timestamp}.{output_format}"
     filepath = os.path.join(Config.STORAGE_PATH, 'audio', filename)
 
     gravacao.status = 'gravando'
@@ -178,21 +191,25 @@ def start_recording(gravacao, *, duration_seconds=None, agendamento=None, block=
     # Guardar stderr para inspecionar falhas do ffmpeg (evita arquivo 0 bytes silencioso)
     ffmpeg_process = None
     try:
+        ffmpeg_cmd = [
+            'ffmpeg',
+            '-nostdin',
+            '-y',
+            '-i',
+            radio.stream_url,
+            '-t',
+            str(duration_seconds),
+        ]
+
+        if output_format == 'flac':
+            ffmpeg_cmd += ['-c:a', 'flac']
+        else:
+            ffmpeg_cmd += ['-acodec', 'libmp3lame', '-b:a', f'{bitrate_kbps}k']
+
+        ffmpeg_cmd.append(filepath)
+
         ffmpeg_process = subprocess.Popen(
-            [
-                'ffmpeg',
-                '-nostdin',
-                '-y',
-                '-i',
-                radio.stream_url,
-                '-t',
-                str(duration_seconds),
-                '-acodec',
-                'libmp3lame',
-                '-b:a',
-                '128k',
-                filepath,
-            ],
+            ffmpeg_cmd,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE,
         )

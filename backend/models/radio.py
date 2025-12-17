@@ -12,6 +12,8 @@ class Radio(db.Model):
     cidade = db.Column(db.String(255))
     estado = db.Column(db.String(2))
     favorita = db.Column(db.Boolean, default=False)
+    bitrate_kbps = db.Column(db.Integer, default=128)
+    output_format = db.Column(db.String(10), default='mp3')  # mp3 ou flac
     criado_em = db.Column(db.DateTime, default=datetime.utcnow)
     atualizado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -28,7 +30,8 @@ class Radio(db.Model):
             'cidade': self.cidade,
             'estado': self.estado,
             'favorita': self.favorita,
+            'bitrate_kbps': self.bitrate_kbps,
+            'output_format': self.output_format,
             'criado_em': self.criado_em.isoformat() if self.criado_em else None,
             'atualizado_em': self.atualizado_em.isoformat() if self.atualizado_em else None
         }
-

@@ -14,6 +14,20 @@ def get_user_ctx():
         'is_admin': payload.get('is_admin', False)
     }
 
+ALLOWED_BITRATES = {96, 128}
+ALLOWED_FORMATS = {'mp3', 'flac'}
+
+def _sanitize_bitrate(value):
+    try:
+        ivalue = int(value)
+        return ivalue if ivalue in ALLOWED_BITRATES else 128
+    except Exception:
+        return 128
+
+def _sanitize_format(value):
+    value = (value or '').lower()
+    return value if value in ALLOWED_FORMATS else 'mp3'
+
 @bp.route('', methods=['GET'])
 @token_required
 def get_radios():
@@ -48,13 +62,18 @@ def create_radio():
     if not data.get('nome') or not data.get('stream_url'):
         return jsonify({'error': 'Nome and stream_url are required'}), 400
     
+    bitrate = _sanitize_bitrate(data.get('bitrate_kbps', 128))
+    output_format = _sanitize_format(data.get('output_format', 'mp3'))
+    
     radio = Radio(
         user_id=user_id,
         nome=data['nome'],
         stream_url=data['stream_url'],
         cidade=data.get('cidade'),
         estado=data.get('estado'),
-        favorita=data.get('favorita', False)
+        favorita=data.get('favorita', False),
+        bitrate_kbps=bitrate,
+        output_format=output_format,
     )
     
     db.session.add(radio)
@@ -87,6 +106,10 @@ def update_radio(radio_id):
         radio.estado = data['estado']
     if 'favorita' in data:
         radio.favorita = data['favorita']
+    if 'bitrate_kbps' in data:
+        radio.bitrate_kbps = _sanitize_bitrate(data.get('bitrate_kbps'))
+    if 'output_format' in data:
+        radio.output_format = _sanitize_format(data.get('output_format'))
     
     db.session.commit()
     
