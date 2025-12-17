@@ -5,7 +5,6 @@ import { motion } from 'framer-motion';
 import { LogOut, User, LayoutDashboard, Radio, Calendar, FileText, Mic, Tag } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Button } from '@/components/ui/button';
-import Logo from '@/components/Logo';
 
 const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -48,9 +47,8 @@ const Navbar = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-4">
-            <Logo />
-            <h1 className="text-xl font-bold text-white tracking-wider">
-              IA <span className="font-light text-cyan-400">RECORDER</span>
+            <h1 className="text-2xl font-bold text-cyan-400 tracking-wider">
+              Clipradio
             </h1>
           </div>
         </div>
