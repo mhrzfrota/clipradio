@@ -25,7 +25,6 @@ const CadastroRadios = () => {
   const [isBuffering, setIsBuffering] = useState(false)
   const [streamStatus, setStreamStatus] = useState({ state: 'idle', message: '' })
   const [viewMode, setViewMode] = useState('card')
-  const [scheduledRadioIds, setScheduledRadioIds] = useState(new Set())
   const [recordPanelRadioId, setRecordPanelRadioId] = useState(null)
   const [recordDuration, setRecordDuration] = useState(15)
   const [startingRecording, setStartingRecording] = useState(false)
