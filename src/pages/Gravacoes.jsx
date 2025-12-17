@@ -480,7 +480,7 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
   const getOngoingStatus = (gravacao) => {
     switch (gravacao.status) {
       case 'iniciando':
-        return { label: 'Iniciando', className: 'bg-yellow-500/15 border-yellow-500/40 text-yellow-200 animate-pulse' };
+        return { label: 'Gravando', className: 'bg-red-500/15 border-red-500/40 text-red-200 animate-pulse' };
       case 'gravando':
         return { label: 'Gravando', className: 'bg-red-500/15 border-red-500/40 text-red-200 animate-pulse' };
       case 'processando':

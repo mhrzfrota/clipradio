@@ -594,15 +594,24 @@ const CadastroRadios = () => {
                             </Button>
 
                             {/* Botão Gravar */}
-                            <Button
-                              size="sm"
-                              variant={recordPanelRadioId === radio.id ? 'default' : 'outline'}
-                              onClick={() => toggleRecordPanel(radio.id)}
-                              className={`flex-1 h-9 font-medium ${recordPanelRadioId === radio.id ? 'bg-red-500 hover:bg-red-600 text-white border-red-500' : 'border-slate-700 hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400'}`}
-                            >
-                              <CircleDot className="w-3.5 h-3.5 mr-1.5" />
-                              Gravar
-                            </Button>
+                            {(() => {
+                              const isRecording = activeRecordingId === radio.id
+                              const isOpen = recordPanelRadioId === radio.id
+                              const baseClasses = 'flex-1 h-9 font-medium'
+                              const activeClasses = 'bg-red-500 hover:bg-red-600 text-white border-red-500 animate-pulse'
+                              const defaultClasses = 'border-slate-700 hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400'
+                              return (
+                                <Button
+                                  size="sm"
+                                  variant={isOpen || isRecording ? 'default' : 'outline'}
+                                  onClick={() => toggleRecordPanel(radio.id)}
+                                  className={`${baseClasses} ${isOpen || isRecording ? activeClasses : defaultClasses}`}
+                                >
+                                  <CircleDot className="w-3.5 h-3.5 mr-1.5" />
+                                  {isRecording ? 'Gravando' : 'Gravar'}
+                                </Button>
+                              )
+                            })()}
                           </div>
 
                           {/* Botões secundários */}
@@ -737,6 +746,24 @@ const CadastroRadios = () => {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
+                          {(() => {
+                            const isRecording = activeRecordingId === radio.id
+                            const isOpen = recordPanelRadioId === radio.id
+                            const baseClasses = 'h-8 px-3 text-xs font-medium'
+                            const activeClasses = 'bg-red-500 hover:bg-red-600 text-white border-red-500 animate-pulse'
+                            const defaultClasses = 'border-slate-700 hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400'
+                            return (
+                              <Button
+                                size="sm"
+                                variant={isOpen || isRecording ? 'default' : 'outline'}
+                                onClick={() => toggleRecordPanel(radio.id)}
+                                className={`${baseClasses} ${isOpen || isRecording ? activeClasses : defaultClasses}`}
+                              >
+                                <CircleDot className="w-3 h-3 mr-1" />
+                                {isRecording ? 'Gravando' : 'Gravar'}
+                              </Button>
+                            )
+                          })()}
                           <Button size="sm" variant="outline" onClick={() => handleEdit(radio)}>
                             <Edit className="w-4 h-4" />
                           </Button>
@@ -768,6 +795,69 @@ const CadastroRadios = () => {
                             )}
                           </Button>
                         </div>
+                        {recordPanelRadioId === radio.id && (
+                          <div className="mt-2 w-full bg-slate-900/50 border border-slate-800 rounded-lg p-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-slate-200">
+                              <div className="flex flex-col gap-1">
+                                <span className="font-semibold text-slate-100">Hora de Inicio</span>
+                                <input
+                                  type="time"
+                                  value={recordStartTime}
+                                  onChange={(e) => setRecordStartTime(e.target.value)}
+                                  className="bg-slate-800/80 border border-slate-700 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <span className="font-semibold text-slate-100">Hora de Fim</span>
+                                <input
+                                  type="time"
+                                  value={recordEndTime}
+                                  onChange={(e) => setRecordEndTime(e.target.value)}
+                                  className="bg-slate-800/80 border border-slate-700 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                />
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-1 text-sm text-slate-200 mt-3">
+                              <span className="font-semibold text-slate-100">Recorrencia</span>
+                              <select
+                                value={recordRecurrence}
+                                onChange={(e) => setRecordRecurrence(e.target.value)}
+                                className="bg-slate-800/80 border border-slate-700 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                              >
+                                <option value="once">Gravacao Unica</option>
+                                <option value="daily">Diaria</option>
+                                <option value="weekly">Semanal</option>
+                              </select>
+                            </div>
+                            <div className="flex flex-col gap-1 text-sm text-slate-200 mt-3">
+                              <span className="font-semibold text-slate-100">Data da Gravacao</span>
+                              <input
+                                type="date"
+                                value={recordDate}
+                                onChange={(e) => setRecordDate(e.target.value)}
+                                className="bg-slate-800/80 border border-slate-700 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                              />
+                            </div>
+                            <Button
+                              size="sm"
+                              disabled={startingRecording}
+                              onClick={() => handleStartRecording(radio)}
+                              className="mt-4 w-full h-9 bg-red-500 hover:bg-red-600 text-white font-semibold"
+                            >
+                              {startingRecording ? (
+                                <>
+                                  <Loader className="w-3.5 h-3.5 mr-2 animate-spin" />
+                                  Iniciando...
+                                </>
+                              ) : (
+                                <>
+                                  <CircleDot className="w-3.5 h-3.5 mr-2" />
+                                  Iniciar Gravacao
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
