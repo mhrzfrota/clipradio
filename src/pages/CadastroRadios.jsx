@@ -25,6 +25,7 @@ const CadastroRadios = () => {
   const [isBuffering, setIsBuffering] = useState(false)
   const [streamStatus, setStreamStatus] = useState({ state: 'idle', message: '' })
   const [viewMode, setViewMode] = useState('card')
+  const [scheduledRadioIds, setScheduledRadioIds] = useState(new Set())
   const [recordPanelRadioId, setRecordPanelRadioId] = useState(null)
   const [recordDuration, setRecordDuration] = useState(15)
   const [startingRecording, setStartingRecording] = useState(false)
@@ -49,7 +50,7 @@ const CadastroRadios = () => {
       const agSet = new Set((agData || []).map((ag) => ag.radio_id))
       setScheduledRadioIds(agSet)
     } catch (error) {
-      toast({ title: 'Erro ao buscar r?dios', description: error.message, variant: 'destructive' })
+      toast({ title: 'Erro ao buscar radios', description: error.message, variant: 'destructive' })
     }
     setLoading(false)
   }, [toast])
