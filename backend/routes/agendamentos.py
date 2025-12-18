@@ -161,6 +161,15 @@ def toggle_status(agendamento_id):
     
     agendamento.status = 'inativo' if agendamento.status == 'agendado' else 'agendado'
     db.session.commit()
+
+    # Atualiza job do scheduler conforme status
+    if agendamento.status == 'agendado':
+        try:
+            schedule_agendamento(agendamento)
+        except Exception as e:
+            print(f"Falha ao reagendar job do agendamento {agendamento.id}: {e}")
+    else:
+        unschedule_agendamento(agendamento.id)
     
     # Broadcast update
     from services.websocket_service import broadcast_update
