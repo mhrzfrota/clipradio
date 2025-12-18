@@ -463,7 +463,7 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
         setOngoingLive(data || []);
       } catch (error) {
         if (process.env.NODE_ENV === 'development') {
-          console.error('Erro ao buscar gravacoes em andamento', error);
+          console.error('Erro ao buscar gravações em andamento', error);
         }
       } finally {
         setLoadingOngoing(false);
@@ -488,13 +488,13 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
       return;
     }
     if (!['gravando', 'iniciando', 'processando'].includes(gravacao.status)) {
-      toast({ title: 'Gravacao nao esta em andamento', description: 'Apenas gravacoes ativas podem ser paradas.', variant: 'destructive' });
+      toast({ title: 'Gravacao nao esta em andamento', description: 'Apenas gravações ativas podem ser paradas.', variant: 'destructive' });
       return;
     }
     setStoppingId(gravacao.id);
     try {
       await apiClient.stopRecording(gravacao.id);
-      toast({ title: 'Gravacao parada', description: `${gravacao.radios?.nome || 'Gravacao'} foi interrompida.` });
+      toast({ title: 'Gravação parada', description: `${gravacao.radios?.nome || 'Gravação'} foi interrompida.` });
       setGravacoes((prev) => prev.map((g) => (g.id === gravacao.id ? { ...g, status: 'concluido' } : g)));
       setOngoingLive((prev) => prev.filter((g) => g.id !== gravacao.id));
       fetchGravacoes();
@@ -637,7 +637,7 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
 
         <title></title>
 
-        <meta name="description" content="Visualize e gerencie suas gravacoes." />
+        <meta name="description" content="Visualize e gerencie suas gravações." />
 
       </Helmet>
 
@@ -645,9 +645,9 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
 
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
 
-          <h1 className="text-4xl font-bold gradient-text">Gravacoes</h1>
+          <h1 className="text-4xl font-bold gradient-text">Gravações</h1>
 
-          <p className="text-muted-foreground mt-2 text-lg">Gerencie todas as gravacoes realizadas pelo sistema.</p>
+          <p className="text-muted-foreground mt-2 text-lg">Gerencie todas as gravações realizadas pelo sistema.</p>
 
         </motion.div>
 
@@ -659,7 +659,7 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
 
             <Button size="sm" variant={activeTab === 'all' ? 'default' : 'outline'} onClick={() => setActiveTab('all')}>
 
-              Todas as gravacoes
+              Todas as gravações
 
             </Button>
 
@@ -679,7 +679,7 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
 
           <div className="flex items-center justify-between mb-4">
 
-            <div className="text-sm text-muted-foreground">{filteredGravacoes.length} gravacoes encontradas</div>
+            <div className="text-sm text-muted-foreground">{filteredGravacoes.length} gravações encontradas</div>
 
             <div className="flex gap-2">
 
@@ -713,7 +713,7 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
 
                 <XCircle className="w-16 h-16 text-slate-600 mx-auto mb-4" />
 
-                <p className="text-muted-foreground">Nenhuma gravacao em andamento.</p>
+                <p className="text-muted-foreground">Nenhuma gravação em andamento.</p>
 
               </div>
 
@@ -787,9 +787,9 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
 
               <XCircle className="w-16 h-16 text-slate-600 mx-auto mb-4" />
 
-              <h3 className="text-2xl font-bold text-white mb-2">Nenhuma gravacao encontrada</h3>
+              <h3 className="text-2xl font-bold text-white mb-2">Nenhuma gravação encontrada</h3>
 
-              <p className="text-muted-foreground">Ajuste os filtros ou realize novas gravacoes.</p>
+              <p className="text-muted-foreground">Ajuste os filtros ou realize novas gravações.</p>
 
             </div>
 

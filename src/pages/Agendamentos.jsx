@@ -195,13 +195,13 @@ const Agendamentos = () => {
           <div className="grid grid-cols-1">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-white flex items-center"><Calendar className="w-6 h-6 mr-3 text-blue-400" />Lista de Agendamentos</h2>
+                <h2 className="text-2xl font-bold text-white flex items-center"><Calendar className="w-6 h-6 mr-3 text-blue-400" />Lista de agendamentos</h2>
                 <span className="bg-slate-700 text-slate-300 px-3 py-1 rounded-full text-sm font-medium">{agendamentos.length} agendamentos</span>
               </div>
               {loading ? (
                 <div className="flex justify-center items-center h-48"><Loader className="w-8 h-8 animate-spin text-cyan-400" /></div>
               ) : agendamentos.length === 0 ? (
-                <div className="text-center py-12"><Calendar className="w-16 h-16 text-slate-600 mx-auto mb-4" /><p className="text-slate-400 text-lg">Nenhum agendamento criado</p><p className="text-slate-500">Clique em "Novo Agendamento" para começar.</p></div>
+                <div className="text-center py-12"><Calendar className="w-16 h-16 text-slate-600 mx-auto mb-4" /><p className="text-slate-400 text-lg">Nenhum agendamento criado</p><p className="text-slate-500">Clique em "Novo agendamento" para começar.</p></div>
               ) : (
                 <div className="space-y-4 max-h-[60vh] overflow-y-auto">
                   {agendamentos.map((agendamento, index) => {

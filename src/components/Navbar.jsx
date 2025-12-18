@@ -12,7 +12,7 @@ const baseNavItems = [
   { name: 'Rádios', path: '/cadastro-radios', icon: Radio },
   { name: 'Agendamentos', path: '/agendamentos', icon: Calendar },
   { name: 'Gravações', path: '/gravacoes', icon: FileText },
-  { name: 'Gravar Manual', path: '/gravador-manual', icon: Mic },
+  { name: 'Gravar manual', path: '/gravador-manual', icon: Mic },
   { name: 'Tags', path: '/tags', icon: Tag },
 ];
 const adminNavItems = [

@@ -197,7 +197,7 @@ const Dashboard = () => {
         >
           <StatCard
             icon={<Radio className="w-8 h-8" />}
-            title="Rádios Cadastradas"
+            title="Rádios cadastradas"
             value={stats.radios}
             loading={loadingStats}
             gradient="from-cyan-600/50 via-cyan-500/30 to-slate-900"
@@ -206,7 +206,7 @@ const Dashboard = () => {
           />
           <StatCard
             icon={<Calendar className="w-8 h-8" />}
-            title="Agendamentos Ativos"
+            title="Agendamentos ativos"
             value={stats.agendamentos}
             loading={loadingStats}
             gradient="from-emerald-600/50 via-emerald-500/30 to-slate-900"
@@ -236,13 +236,13 @@ const Dashboard = () => {
               <CardHeader>
                 <CardTitle className="flex items-center text-white">
                   <Plus className="w-6 h-6 mr-3 text-cyan-400" />
-                  Nova Rádio
+                  Nova rádio
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-sm text-slate-400 mb-1">Nome da Rádio</label>
+                    <label className="block text-sm text-slate-400 mb-1">Nome da rádio</label>
                     <Input
                       value={formData.nome}
                       onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
@@ -360,7 +360,7 @@ const Dashboard = () => {
             <Card className="bg-slate-800/40 border-slate-700/60 h-full">
               <CardContent className="flex flex-col items-center justify-center h-full p-8 text-center">
                 <LayoutGrid className="w-16 h-16 text-cyan-400 mb-4" />
-                <h2 className="text-2xl font-bold text-white mb-2">Acesse o Painel de Rádios</h2>
+                <h2 className="text-2xl font-bold text-white mb-2">Acesse o painel de rádios</h2>
                 <p className="text-slate-400 mb-6 max-w-md">
                   Controle suas rádios, ouça ao vivo, grave manualmente e veja seus agendamentos.
                 </p>
@@ -369,7 +369,7 @@ const Dashboard = () => {
                   onClick={() => navigate('/cadastro-radios')}
                 >
                   <LayoutGrid className="w-5 h-5 mr-2" />
-                  Ir para Rádios
+                  Ir para rádios
                 </Button>
               </CardContent>
             </Card>

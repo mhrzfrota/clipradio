@@ -346,7 +346,7 @@ const CadastroRadios = () => {
     <div className="min-h-screen p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold gradient-text mb-2">Gerenciador de Rádios</h1>
+          <h1 className="text-3xl md:text-4xl font-bold gradient-text mb-2">Gerenciador de rádios</h1>
           <p className="text-slate-400 text-lg">Adicione, edite e organize suas estações de rádio.</p>
         </motion.div>
 
@@ -356,13 +356,13 @@ const CadastroRadios = () => {
               <CardHeader>
                 <CardTitle className="flex items-center text-white">
                   <Plus className="w-6 h-6 mr-3 text-cyan-400" />
-                  {editingId ? 'Editar Rádio' : 'Nova Rádio'}
+                  {editingId ? 'Editar rádio' : 'Nova rádio'}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-sm text-slate-400 mb-1">Nome da Rádio</label>
+                    <label className="block text-sm text-slate-400 mb-1">Nome da rádio</label>
                     <Input
                       value={formData.nome}
                       onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
@@ -487,7 +487,7 @@ const CadastroRadios = () => {
               <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <CardTitle className="flex items-center text-white">
                   <Radio className="w-6 h-6 mr-3 text-cyan-400" />
-                  Rádios Cadastradas
+                  Rádios cadastradas
                 </CardTitle>
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-slate-400">Total: {radios.length}</span>
