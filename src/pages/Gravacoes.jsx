@@ -713,6 +713,9 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
             ) : (
 
               <div className="bg-slate-900/80 border border-slate-800 rounded-lg overflow-hidden">
+                {loadingOngoing && (
+                  <div className="px-4 py-2 text-xs text-slate-400">Atualizando gravações em tempo real...</div>
+                )}
 
                 {ongoingGravacoes.map((gravacao, idx) => {
                   const statusInfo = getOngoingStatus(gravacao);
@@ -722,13 +725,13 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
 
                     <div
                       key={gravacao.id}
-                      className={px-4 py-3 flex items-center justify-between }
+                      className={`px-4 py-3 flex items-center justify-between ${idx !== ongoingGravacoes.length - 1 ? 'border-b border-slate-800/80' : ''}`}
                     >
                       <div className="flex items-center gap-3">
                         <div className="flex flex-col">
                           <span className="text-white font-semibold">{gravacao.radios?.nome || 'Radio'}</span>
                           <div className="flex items-center gap-2 text-xs text-slate-400">
-                            <span>Iniciada em {format(new Date(gravacao.criado_em), "d MMM '?s' HH:mm", { locale: ptBR })}</span>
+                            <span>Iniciada em {format(new Date(gravacao.criado_em), "d MMM 'às' HH:mm", { locale: ptBR })}</span>
                             <span className="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-200 uppercase tracking-wide">
                               {tipoLabel}
                             </span>
@@ -757,7 +760,7 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
                             )}
                           </Button>
                         )}
-                        <span className={	ext-sm px-3 py-1 rounded-full border }>
+                        <span className={`text-sm px-3 py-1 rounded-full border ${statusInfo.className}`}>
                           {statusInfo.label}
                         </span>
                       </div>
