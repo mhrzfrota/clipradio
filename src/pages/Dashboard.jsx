@@ -4,14 +4,26 @@ import apiClient from '@/lib/apiClient';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
-import { Radio, Calendar, Download, Loader, LayoutGrid } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Radio, Calendar, Download, Loader, LayoutGrid, Plus, Globe, MapPin, Star, StarOff, CheckCircle, AlertCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Helmet } from 'react-helmet';
 
 const Dashboard = () => {
   const [stats, setStats] = useState({ radios: 0, agendamentos: 0, gravacoes: 0 });
   const [loadingStats, setLoadingStats] = useState(true);
+  const [formData, setFormData] = useState({
+    nome: '',
+    stream_url: '',
+    cidade: '',
+    estado: '',
+    favorita: false,
+    bitrate_kbps: 128,
+    output_format: 'mp3',
+  });
+  const [saving, setSaving] = useState(false);
+  const [streamStatus, setStreamStatus] = useState({ state: 'idle', message: '' });
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -42,6 +54,103 @@ const Dashboard = () => {
       fetchStats();
     }
   }, [user, fetchStats]);
+
+  // Validação do stream URL
+  useEffect(() => {
+    const url = formData.stream_url.trim();
+    if (!url) {
+      setStreamStatus({ state: 'idle', message: '' });
+      return;
+    }
+
+    let cancelled = false;
+    const audio = new Audio();
+    let timeoutId;
+
+    function cleanup() {
+      audio.pause();
+      audio.src = '';
+      audio.removeEventListener('canplay', handleCanPlay);
+      audio.removeEventListener('loadedmetadata', handleCanPlay);
+      audio.removeEventListener('error', handleError);
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+
+    function handleCanPlay() {
+      if (cancelled) return;
+      setStreamStatus({ state: 'valid', message: 'Stream válido para agendamentos e gravações.' });
+      cleanup();
+    }
+
+    function handleError() {
+      if (cancelled) return;
+      setStreamStatus({ state: 'error', message: 'Não foi possível validar este stream.' });
+      cleanup();
+    }
+
+    setStreamStatus({ state: 'loading', message: 'Validando stream...' });
+
+    timeoutId = setTimeout(() => {
+      if (cancelled) return;
+      setStreamStatus({ state: 'error', message: 'Tempo esgotado ao validar o stream.' });
+      cleanup();
+    }, 8000);
+
+    audio.addEventListener('canplay', handleCanPlay);
+    audio.addEventListener('loadedmetadata', handleCanPlay);
+    audio.addEventListener('error', handleError);
+    audio.src = url;
+    audio.load();
+
+    return () => {
+      cancelled = true;
+      cleanup();
+    };
+  }, [formData.stream_url]);
+
+  const resetForm = useCallback(() => {
+    setFormData({ nome: '', stream_url: '', cidade: '', estado: '', favorita: false, bitrate_kbps: 128, output_format: 'mp3' });
+    setStreamStatus({ state: 'idle', message: '' });
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!formData.nome || !formData.stream_url || !formData.cidade || !formData.estado) {
+      toast({ title: 'Erro', description: 'Todos os campos são obrigatórios', variant: 'destructive' });
+      return;
+    }
+
+    if (streamStatus.state === 'error') {
+      toast({ title: 'URL inválida', description: 'Ajuste a URL do stream antes de salvar.', variant: 'destructive' });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await apiClient.createRadio(formData);
+      toast({ title: 'Sucesso!', description: 'Rádio cadastrada com sucesso' });
+      resetForm();
+      fetchStats();
+    } catch (error) {
+      toast({ title: 'Erro ao salvar rádio', description: error.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const renderStreamStatusIcon = () => {
+    if (streamStatus.state === 'loading') {
+      return <Loader className="w-4 h-4 text-cyan-400 animate-spin" />;
+    }
+    if (streamStatus.state === 'valid') {
+      return <CheckCircle className="w-4 h-4 text-emerald-400" />;
+    }
+    if (streamStatus.state === 'error') {
+      return <AlertCircle className="w-4 h-4 text-red-400" />;
+    }
+    return null;
+  };
 
   const StatCard = ({ icon, title, value, loading, colorClass, onNavigate }) => (
     <motion.div whileHover={{ scale: 1.05 }} transition={{ type: 'spring', stiffness: 300 }}>
@@ -108,10 +217,128 @@ const Dashboard = () => {
         </motion.div>
 
         <motion.div
-          className="mt-8 text-center"
+          className="mt-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
+        >
+          <Card className="bg-slate-800/40 border-slate-700/60">
+            <CardHeader>
+              <CardTitle className="flex items-center text-white">
+                <Plus className="w-6 h-6 mr-3 text-cyan-400" />
+                Nova Rádio
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm text-slate-400 mb-1">Nome da Rádio</label>
+                  <Input
+                    value={formData.nome}
+                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                    placeholder="Ex: Rádio Rock"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-400 mb-1">URL do Stream</label>
+                  <div className="relative">
+                    <Input
+                      className="pr-10"
+                      value={formData.stream_url}
+                      onChange={(e) => setFormData({ ...formData, stream_url: e.target.value })}
+                      placeholder="https://stream.minharadio.com/stream"
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {renderStreamStatusIcon()}
+                    </div>
+                  </div>
+                  {streamStatus.state === 'error' && (
+                    <p className="text-xs text-red-400 mt-1">{streamStatus.message}</p>
+                  )}
+                  {streamStatus.state === 'valid' && (
+                    <p className="text-xs text-emerald-400 mt-1">
+                      Stream reconhecido e pronto para agendamentos ou gravações.
+                    </p>
+                  )}
+                  {streamStatus.state === 'loading' && (
+                    <p className="text-xs text-slate-400 mt-1">Validando stream...</p>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm text-slate-400 mb-1">Cidade</label>
+                    <div className="relative">
+                      <Input
+                        value={formData.cidade}
+                        onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
+                        placeholder="São Paulo"
+                      />
+                      <Globe className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-slate-400 mb-1">Estado (UF)</label>
+                    <div className="relative">
+                      <Input
+                        maxLength={2}
+                        value={formData.estado}
+                        onChange={(e) => setFormData({ ...formData, estado: e.target.value.toUpperCase() })}
+                        placeholder="SP"
+                      />
+                      <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm text-slate-400 mb-1">Bitrate da gravação</label>
+                    <select
+                      value={formData.bitrate_kbps}
+                      onChange={(e) => setFormData({ ...formData, bitrate_kbps: Number(e.target.value) })}
+                      className="w-full bg-slate-900/60 border border-slate-700 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    >
+                      <option value={128}>128 kbps</option>
+                      <option value={96}>96 kbps</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-slate-400 mb-1">Formato do arquivo</label>
+                    <select
+                      value={formData.output_format}
+                      onChange={(e) => setFormData({ ...formData, output_format: e.target.value })}
+                      className="w-full bg-slate-900/60 border border-slate-700 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    >
+                      <option value="mp3">MP3</option>
+                      <option value="flac">FLAC</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between py-2">
+                  <span className="text-sm text-slate-300">Marcar como favorita</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setFormData((prev) => ({ ...prev, favorita: !prev.favorita }))}
+                    className="text-yellow-400"
+                  >
+                    {formData.favorita ? <Star className="w-5 h-5" /> : <StarOff className="w-5 h-5" />}
+                  </Button>
+                </div>
+
+                <Button type="submit" className="w-full" disabled={saving}>
+                  {saving ? 'Salvando...' : 'Adicionar Rádio'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          className="mt-8 text-center"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
         >
           <div className="card">
             <h2 className="text-2xl font-bold text-foreground">Acesse o Painel de Rádios</h2>
