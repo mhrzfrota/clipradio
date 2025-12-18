@@ -113,6 +113,7 @@ class ApiClient {
     if (filters.data) params.append('data', filters.data);
     if (filters.cidade) params.append('cidade', filters.cidade);
     if (filters.estado) params.append('estado', filters.estado);
+    if (filters.includeStats) params.append('include_stats', 'true');
     
     const query = params.toString();
     return this.request(`/gravacoes${query ? `?${query}` : ''}`);

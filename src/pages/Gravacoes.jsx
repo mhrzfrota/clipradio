@@ -416,18 +416,21 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
     setLoading(true);
 
     try {
-      const [gravData, agData] = await Promise.all([
+      const [gravResp, agData] = await Promise.all([
         apiClient.getGravacoes({
           radioId: filters.radioId !== 'all' ? filters.radioId : undefined,
           data: filters.data,
           cidade: filters.cidade,
           estado: filters.estado,
+          includeStats: true,
         }),
         apiClient.getAgendamentos().catch(() => []),
-        apiClient.getGravacoesStats(),
       ]);
-      const statsData = gravData?.stats || (await apiClient.getGravacoesStats().catch(() => null));
-      setGravacoes(gravData || []);
+
+      const gravList = Array.isArray(gravResp) ? gravResp : gravResp?.items || [];
+      const statsData = gravResp?.stats;
+
+      setGravacoes(gravList || []);
       setAgendamentos(agData || []);
       setStats(statsData || { totalGravacoes: 0, totalDuration: 0, totalSize: 0, uniqueRadios: 0 });
     } catch (error) {

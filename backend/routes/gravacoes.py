@@ -54,6 +54,7 @@ def get_gravacoes():
     ctx = get_user_ctx()
     user_id = ctx.get('user_id')
     is_admin = ctx.get('is_admin', False)
+    include_stats = (request.args.get('include_stats') or '').lower() == 'true'
 
     query = Gravacao.query
     if not is_admin:
@@ -88,8 +89,19 @@ def get_gravacoes():
     
     # Enriquecer metadados com dados reais do arquivo (duração, tamanho, status)
     gravacoes = [hydrate_gravacao_metadata(g, autocommit=True) for g in gravacoes]
-    
-    return jsonify([g.to_dict(include_radio=True) for g in gravacoes]), 200
+
+    payload = [g.to_dict(include_radio=True) for g in gravacoes]
+
+    if include_stats:
+        stats = {
+            'totalGravacoes': len(gravacoes),
+            'totalDuration': sum((g.duracao_segundos or 0) or ((g.duracao_minutos or 0) * 60) for g in gravacoes),
+            'totalSize': sum(g.tamanho_mb or 0 for g in gravacoes),
+            'uniqueRadios': len(set(g.radio_id for g in gravacoes)),
+        }
+        return jsonify({'items': payload, 'stats': stats}), 200
+
+    return jsonify(payload), 200
 
 
 @bp.route('/ongoing', methods=['GET'])
