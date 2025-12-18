@@ -364,6 +364,8 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
   const [radios, setRadios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ totalGravacoes: 0, totalDuration: 0, totalSize: 0, uniqueRadios: 0 });
+  const [ongoingLive, setOngoingLive] = useState([]);
+  const [loadingOngoing, setLoadingOngoing] = useState(false);
   const location = useLocation();
 
   const searchParams = new URLSearchParams(location.search);
@@ -445,6 +447,26 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
 
   }, [fetchGravacoes]);
 
+  useEffect(() => {
+    let timer;
+    const fetchOngoing = async () => {
+      setLoadingOngoing(true);
+      try {
+        const data = await apiClient.getOngoingRecordings();
+        setOngoingLive(data || []);
+      } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Erro ao buscar gravacoes em andamento', error);
+        }
+      } finally {
+        setLoadingOngoing(false);
+      }
+    };
+    fetchOngoing();
+    timer = setInterval(fetchOngoing, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
 
 
   const handlePlay = (id) => setCurrentPlayingId(id);
@@ -466,9 +488,8 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
     try {
       await apiClient.stopRecording(gravacao.id);
       toast({ title: 'Gravacao parada', description: `${gravacao.radios?.nome || 'Gravacao'} foi interrompida.` });
-      setGravacoes((prev) =>
-        prev.map((g) => (g.id === gravacao.id ? { ...g, status: 'concluido' } : g))
-      );
+      setGravacoes((prev) => prev.map((g) => (g.id === gravacao.id ? { ...g, status: 'concluido' } : g)));
+      setOngoingLive((prev) => prev.filter((g) => g.id !== gravacao.id));
       fetchGravacoes();
     } catch (error) {
       toast({ title: 'Erro ao parar', description: error.message, variant: 'destructive' });
@@ -592,8 +613,11 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
 
   const filteredGravacoes = useMemo(() => [...agAsGravacoes, ...gravacoes], [agAsGravacoes, gravacoes]);
   const ongoingGravacoes = useMemo(
-    () => filteredGravacoes.filter((g) => ['gravando', 'iniciando', 'processando', 'concluido'].includes(g.status)),
-    [filteredGravacoes]
+    () => ongoingLive.map((g) => ({
+      ...g,
+      radios: g.radios || radios.find((r) => r.id === g.radio_id),
+    })),
+    [ongoingLive, radios]
   );
 
 
@@ -693,18 +717,22 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
                 {ongoingGravacoes.map((gravacao, idx) => {
                   const statusInfo = getOngoingStatus(gravacao);
                   const canStop = ['gravando', 'iniciando', 'processando'].includes(gravacao.status);
+                  const tipoLabel = gravacao.tipo === 'agendado' ? 'Agendado' : gravacao.tipo === 'manual' ? 'Manual' : gravacao.tipo || 'Outro';
                   return (
 
                     <div
                       key={gravacao.id}
-                      className={`px-4 py-3 flex items-center justify-between ${idx !== ongoingGravacoes.length - 1 ? 'border-b border-slate-800/80' : ''}`}
+                      className={px-4 py-3 flex items-center justify-between }
                     >
                       <div className="flex items-center gap-3">
                         <div className="flex flex-col">
                           <span className="text-white font-semibold">{gravacao.radios?.nome || 'Radio'}</span>
-                          <span className="text-xs text-slate-400">
-                            Iniciada em {format(new Date(gravacao.criado_em), "d MMM 'as' HH:mm", { locale: ptBR })}
-                          </span>
+                          <div className="flex items-center gap-2 text-xs text-slate-400">
+                            <span>Iniciada em {format(new Date(gravacao.criado_em), "d MMM '?s' HH:mm", { locale: ptBR })}</span>
+                            <span className="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-200 uppercase tracking-wide">
+                              {tipoLabel}
+                            </span>
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
@@ -729,7 +757,7 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
                             )}
                           </Button>
                         )}
-                        <span className={`text-sm px-3 py-1 rounded-full border ${statusInfo.className}`}>
+                        <span className={	ext-sm px-3 py-1 rounded-full border }>
                           {statusInfo.label}
                         </span>
                       </div>

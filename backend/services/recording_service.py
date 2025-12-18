@@ -3,6 +3,7 @@ import subprocess
 import threading
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+from typing import Dict
 
 from flask import current_app
 from app import db
@@ -15,6 +16,7 @@ LOCAL_TZ = ZoneInfo("America/Fortaleza")
 MIN_RECORD_SECONDS = 10  # evita gravação zero em caso de input faltando
 ALLOWED_BITRATES = {96, 128}
 ALLOWED_FORMATS = {'mp3', 'flac'}
+ACTIVE_PROCESSES: Dict[str, subprocess.Popen] = {}
 
 
 def _get_audio_filepath(gravacao):
@@ -217,6 +219,7 @@ def start_recording(gravacao, *, duration_seconds=None, agendamento=None, block=
             stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE,
         )
+        ACTIVE_PROCESSES[gravacao.id] = ffmpeg_process
     except Exception as exc:
         _finalizar_gravacao(gravacao, 'erro', filepath, duration_seconds, agendamento)
         raise exc
@@ -273,6 +276,7 @@ def start_recording(gravacao, *, duration_seconds=None, agendamento=None, block=
         except Exception:
             _finalizar_gravacao(gravacao, 'erro', filepath, duration_seconds, agendamento)
         finally:
+            ACTIVE_PROCESSES.pop(gravacao.id, None)
             if ctx:
                 ctx.pop()
 
@@ -285,9 +289,19 @@ def start_recording(gravacao, *, duration_seconds=None, agendamento=None, block=
 
 
 def stop_recording(gravacao):
-    """Para gravação em andamento manualmente."""
+    """Para grava??o em andamento manualmente."""
     filepath = _get_audio_filepath(gravacao)
+
+    proc = ACTIVE_PROCESSES.pop(gravacao.id, None)
+    if proc:
+        try:
+            proc.terminate()
+        except Exception:
+            pass
+
     _finalizar_gravacao(gravacao, 'concluido', filepath=filepath)
+
+
 
 def process_audio_with_ai(gravacao, palavras_chave):
     """Processa áudio com IA para gerar clipes"""

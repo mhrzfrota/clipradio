@@ -91,6 +91,23 @@ def get_gravacoes():
     
     return jsonify([g.to_dict(include_radio=True) for g in gravacoes]), 200
 
+
+@bp.route('/ongoing', methods=['GET'])
+@token_required
+def get_ongoing():
+    """Retorna gravações em andamento (gravando/iniciando/processando). Admin vê todas."""
+    ctx = get_user_ctx()
+    user_id = ctx.get('user_id')
+    is_admin = ctx.get('is_admin', False)
+
+    query = Gravacao.query.filter(Gravacao.status.in_(('iniciando', 'gravando', 'processando')))
+    if not is_admin:
+        query = query.filter_by(user_id=user_id)
+
+    gravacoes = query.order_by(Gravacao.criado_em.desc()).all()
+    gravacoes = [hydrate_gravacao_metadata(g, autocommit=True) for g in gravacoes]
+    return jsonify([g.to_dict(include_radio=True) for g in gravacoes]), 200
+
 @bp.route('/<gravacao_id>', methods=['GET'])
 @token_required
 def get_gravacao(gravacao_id):

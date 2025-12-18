@@ -259,6 +259,10 @@ class ApiClient {
     });
   }
 
+  async getOngoingRecordings() {
+    return this.request('/gravacoes/ongoing');
+  }
+
   async processAudioWithAI(gravacaoId, palavrasChave) {
     return this.request('/recording/process-ai', {
       method: 'POST',
