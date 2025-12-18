@@ -1,9 +1,13 @@
 from flask import Blueprint, request, jsonify
 from app import db
 from models.gravacao import Gravacao
+from models.user import User
+from models.agendamento import Agendamento
+from models.radio import Radio
 from utils.jwt_utils import token_required, decode_token
 from flask import request as flask_request
 from datetime import datetime
+from sqlalchemy import desc
 from services.recording_service import hydrate_gravacao_metadata
 
 bp = Blueprint('gravacoes', __name__)
@@ -167,4 +171,68 @@ def get_stats():
         'totalDuration': total_duration,
         'totalSize': total_size,
         'uniqueRadios': unique_radios
+    }), 200
+
+
+@bp.route('/admin/quick-stats', methods=['GET'])
+@token_required
+def admin_quick_stats():
+    """Retorna indicadores rápidos para admins."""
+    ctx = get_user_ctx()
+    if not ctx.get('is_admin'):
+        return jsonify({'error': 'Forbidden'}), 403
+
+    # Base de gravações válidas (ignora erros)
+    duration_expr = db.func.coalesce(Gravacao.duracao_segundos, Gravacao.duracao_minutos * 60)
+    base_grav = Gravacao.query.filter(Gravacao.status != 'erro')
+
+    total_duration_seconds = (
+        base_grav.with_entities(db.func.coalesce(db.func.sum(duration_expr), 0)).scalar() or 0
+    )
+    total_users = db.session.query(User).count()
+
+    # Usuário que mais agendou
+    top_scheduler_row = (
+        db.session.query(Agendamento.user_id, db.func.count(Agendamento.id).label('total'))
+        .group_by(Agendamento.user_id)
+        .order_by(desc('total'))
+        .first()
+    )
+    top_scheduler = None
+    if top_scheduler_row:
+        user = User.query.get(top_scheduler_row.user_id)
+        if user:
+            top_scheduler = {
+                'id': user.id,
+                'nome': user.nome or user.email,
+                'email': user.email,
+                'total_agendamentos': int(top_scheduler_row.total or 0),
+            }
+
+    # Rádio com mais tempo gravado
+    top_radio_row = (
+        base_grav.with_entities(
+            Gravacao.radio_id,
+            db.func.coalesce(db.func.sum(duration_expr), 0).label('total_dur')
+        )
+        .group_by(Gravacao.radio_id)
+        .order_by(desc('total_dur'))
+        .first()
+    )
+    top_radio = None
+    if top_radio_row:
+        radio = Radio.query.get(top_radio_row.radio_id)
+        if radio:
+            top_radio = {
+                'id': radio.id,
+                'nome': radio.nome,
+                'total_duration_seconds': int(top_radio_row.total_dur or 0),
+            }
+
+    return jsonify({
+        'total_duration_seconds': int(total_duration_seconds),
+        'total_duration_hours': round((total_duration_seconds or 0) / 3600, 2),
+        'total_users': total_users,
+        'top_scheduler': top_scheduler,
+        'top_radio': top_radio,
     }), 200

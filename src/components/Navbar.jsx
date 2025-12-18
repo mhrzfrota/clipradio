@@ -1,19 +1,22 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LogOut, User, LayoutDashboard, Radio, Calendar, FileText, Mic, Tag, CircleDot, X } from 'lucide-react';
+import { LogOut, User, LayoutDashboard, Radio, Calendar, FileText, Mic, Tag, CircleDot, X, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/Logo';
 
-const navItems = [
+const baseNavItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { name: 'Rádios', path: '/cadastro-radios', icon: Radio },
   { name: 'Agendamentos', path: '/agendamentos', icon: Calendar },
   { name: 'Gravações', path: '/gravacoes', icon: FileText },
   { name: 'Gravar Manual', path: '/gravador-manual', icon: Mic },
   { name: 'Tags', path: '/tags', icon: Tag },
+];
+const adminNavItems = [
+  { name: 'Relatórios', path: '/admin-relatorios', icon: BarChart3 },
 ];
 
 const Navbar = () => {
@@ -22,6 +25,10 @@ const Navbar = () => {
   const location = useLocation();
   const [showRecordingPanel, setShowRecordingPanel] = useState(false);
   const [ongoingRecords, setOngoingRecords] = useState([]);
+  const navItems = useMemo(
+    () => (user?.is_admin ? [...baseNavItems, ...adminNavItems] : baseNavItems),
+    [user],
+  );
 
   const getNavLinkClass = (path) => {
     const baseClass = 'flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-all duration-300';

@@ -146,6 +146,10 @@ class ApiClient {
     return this.request('/gravacoes/stats');
   }
 
+  async getAdminQuickStats() {
+    return this.request('/gravacoes/admin/quick-stats');
+  }
+
   // ============ AGENDAMENTOS ============
   async getAgendamentos() {
     return this.request('/agendamentos');
