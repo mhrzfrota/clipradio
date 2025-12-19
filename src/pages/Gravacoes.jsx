@@ -626,13 +626,25 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
   }, [agendamentos, radios]);
 
   const filteredGravacoes = useMemo(() => [...agAsGravacoes, ...gravacoes], [agAsGravacoes, gravacoes]);
+  const concludedGravacoes = useMemo(
+    () => filteredGravacoes.filter((gravacao) => String(gravacao.status || '').toLowerCase() === 'concluido'),
+    [filteredGravacoes]
+  );
   const scheduledGravacoes = useMemo(
     () =>
-      filteredGravacoes.filter((gravacao) => {
+      concludedGravacoes.filter((gravacao) => {
         const tipo = String(gravacao.tipo || '').toLowerCase();
-        return tipo === 'agendado' || gravacao.status === 'agendado';
+        return tipo === 'agendado';
       }),
-    [filteredGravacoes]
+    [concludedGravacoes]
+  );
+  const manualGravacoes = useMemo(
+    () =>
+      concludedGravacoes.filter((gravacao) => {
+        const tipo = String(gravacao.tipo || 'manual').toLowerCase();
+        return tipo === 'manual';
+      }),
+    [concludedGravacoes]
   );
   const ongoingGravacoes = useMemo(
     () => ongoingLive.map((g) => ({
@@ -646,7 +658,9 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
     ? ongoingGravacoes.length
     : activeTab === 'agendados'
       ? scheduledGravacoes.length
-      : filteredGravacoes.length;
+      : activeTab === 'manuais'
+        ? manualGravacoes.length
+      : concludedGravacoes.length;
 
 
 
@@ -693,6 +707,12 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
             <Button size="sm" variant={activeTab === 'agendados' ? 'default' : 'outline'} onClick={() => setActiveTab('agendados')}>
 
               Agendados
+
+            </Button>
+
+            <Button size="sm" variant={activeTab === 'manuais' ? 'default' : 'outline'} onClick={() => setActiveTab('manuais')}>
+
+              Manuais
 
             </Button>
 
@@ -859,7 +879,57 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
 
             )
 
-          ) : filteredGravacoes.length === 0 ? (
+          ) : activeTab === 'manuais' ? (
+
+            manualGravacoes.length === 0 ? (
+
+              <div className="card text-center py-12">
+
+                <XCircle className="w-16 h-16 text-slate-600 mx-auto mb-4" />
+
+                <h3 className="text-2xl font-bold text-white mb-2">Nenhuma gravacao manual encontrada</h3>
+
+                <p className="text-muted-foreground">Ajuste os filtros ou realize novas gravacoes.</p>
+
+              </div>
+
+            ) : (
+
+              <div className="space-y-4">
+
+                {manualGravacoes.map((gravacao, index) => (
+
+                  <GravacaoItem
+
+                    key={gravacao.id}
+
+                    gravacao={gravacao}
+
+                    index={index}
+
+                    isPlaying={currentPlayingId === gravacao.id}
+
+                    onPlay={() => handlePlay(gravacao.id)}
+
+                    onStop={handleStop}
+
+                    setGlobalAudioTrack={setGlobalAudioTrack}
+
+                    onDelete={handleDeleteLocal}
+
+                    isSelected={selectedIds.has(gravacao.id)}
+
+                    onToggleSelection={toggleSelection}
+
+                  />
+
+                ))}
+
+              </div>
+
+            )
+
+          ) : concludedGravacoes.length === 0 ? (
 
             <div className="card text-center py-12">
 
@@ -875,7 +945,7 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
 
             <div className="space-y-4">
 
-              {filteredGravacoes.map((gravacao, index) => (
+              {concludedGravacoes.map((gravacao, index) => (
 
                 <GravacaoItem
 
