@@ -301,7 +301,7 @@ const Dashboard = () => {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="flex flex-col">
-                      <label className="block text-sm text-slate-400 mb-1 h-5">Bitrate da gravação</label>
+                      <label className="block text-sm text-slate-400 mb-1 h-5">Bitrate</label>
                       <select
                         value={formData.bitrate_kbps}
                         onChange={(e) => setFormData({ ...formData, bitrate_kbps: Number(e.target.value) })}
@@ -312,7 +312,7 @@ const Dashboard = () => {
                       </select>
                     </div>
                     <div className="flex flex-col">
-                      <label className="block text-sm text-slate-400 mb-1 h-5">Formato do arquivo</label>
+                      <label className="block text-sm text-slate-400 mb-1 h-5">Formato</label>
                       <select
                         value={formData.output_format}
                         onChange={(e) => setFormData({ ...formData, output_format: e.target.value })}
