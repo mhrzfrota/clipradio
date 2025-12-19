@@ -74,7 +74,7 @@ const Login = () => {
       >
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold gradient-text mb-2">
-            Bem-vindo(a)!
+            Bem-vindo(a) ao Clipradio!
           </h1>
           <p className="text-slate-400">
             Faça login para acessar o painel.
@@ -106,7 +106,7 @@ const Login = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="input"
-              placeholder="******** (mínimo 6 caracteres)"
+              placeholder="********"
               required
             />
           </div>
