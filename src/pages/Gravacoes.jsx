@@ -857,6 +857,8 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
 
               </div>
 
+            )
+
           ) : filteredGravacoes.length === 0 ? (
 
             <div className="card text-center py-12">
