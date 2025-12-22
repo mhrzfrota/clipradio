@@ -248,7 +248,7 @@ export default function GravadorManual() {
               <div className="p-4 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-300 text-sm flex items-start gap-3">
                 <Info className="w-4 h-4 text-cyan-400 mt-1" />
                 <div>
-                  <p>As gravações são executadas no servidor backend. Você pode acompanhar o status na lista de gravações.</p>
+                  <p>Você pode acompanhar o status na lista de gravações.</p>
                   <p className="text-slate-400 mt-1">Certifique-se de que a URL do stream está ativa antes de iniciar.</p>
                 </div>
               </div>

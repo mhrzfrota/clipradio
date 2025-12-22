@@ -632,11 +632,11 @@ const CadastroRadios = () => {
                               const isRecording = activeRecordingId === radio.id
                               const baseClasses = 'flex-1 h-9 font-medium transition-all duration-300'
                               const activeClasses = 'bg-red-500 hover:bg-red-600 text-white border-red-500 shadow-lg shadow-red-500/30'
-                              const defaultClasses = 'border-slate-700 hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400'
+                              const defaultClasses = 'bg-red-500 hover:bg-red-600 text-black border-red-500'
                               return (
                                 <Button
                                   size="sm"
-                                  variant={isRecording ? 'default' : 'outline'}
+                                  variant={isRecording ? 'default' : 'default'}
                                   onClick={() => openRecordModal(radio.id)}
                                   className={`${baseClasses} ${isRecording ? activeClasses : defaultClasses}`}
                                   disabled={isRecording}
@@ -721,11 +721,11 @@ const CadastroRadios = () => {
                             const isRecording = activeRecordingId === radio.id
                             const baseClasses = 'h-8 px-3 text-xs font-medium transition-all duration-300'
                             const activeClasses = 'bg-red-500 hover:bg-red-600 text-white border-red-500 shadow-lg shadow-red-500/30'
-                            const defaultClasses = 'border-slate-700 hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400'
+                            const defaultClasses = 'bg-red-500 hover:bg-red-600 text-black border-red-500'
                             return (
                               <Button
                                 size="sm"
-                                variant={isRecording ? 'default' : 'outline'}
+                                variant={isRecording ? 'default' : 'default'}
                                 onClick={() => openRecordModal(radio.id)}
                                 className={`${baseClasses} ${isRecording ? activeClasses : defaultClasses}`}
                                 disabled={isRecording}

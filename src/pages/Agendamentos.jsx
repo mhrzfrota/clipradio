@@ -236,7 +236,7 @@ const Agendamentos = () => {
               ) : agendamentos.length === 0 ? (
                 <div className="text-center py-12"><Calendar className="w-16 h-16 text-slate-600 mx-auto mb-4" /><p className="text-slate-400 text-lg">Nenhum agendamento criado</p><p className="text-slate-500">Clique em "Novo agendamento" para começar.</p></div>
               ) : (
-                <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+                <div className="space-y-4">
                   {agendamentos.map((agendamento, index) => {
                     const { horario_display, statusInfo, recorrencia_display } = formatAgendamentoDisplay(agendamento);
                     return (
