@@ -17,7 +17,6 @@ import GlobalAudioPlayer from '@/components/GlobalAudioPlayer';
 import Profile from '@/pages/Profile';
 import Tags from '@/pages/Tags';
 import SystemStatus from '@/pages/SystemStatus';
-import AdminRelatorios from '@/pages/AdminRelatorios';
 import Admin from '@/pages/Admin';
 
 function App() {
@@ -57,7 +56,6 @@ function App() {
             <Route path="/gravador-manual" element={<ProtectedRoute><GravadorManual /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/tags" element={<ProtectedRoute><Tags /></ProtectedRoute>} />
-            <Route path="/admin-relatorios" element={<ProtectedRoute><AdminRelatorios /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
             <Route path="/status" element={<ProtectedRoute><SystemStatus /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/dashboard" />} />
@@ -68,10 +66,6 @@ function App() {
           track={globalAudioTrack}
           onClose={() => setGlobalAudioTrack(null)}
         />
-
-        <footer className="fixed bottom-4 right-6 text-xs text-slate-200 font-light z-50 pointer-events-none">
-          MSL Estratégia - Comunicação & Marketing
-        </footer>
       </div>
     </>
   );

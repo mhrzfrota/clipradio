@@ -4,15 +4,24 @@ import apiClient from '@/lib/apiClient';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
-import { Radio, Calendar, Download, Loader, Plus, Globe, MapPin, Star, StarOff, CheckCircle, AlertCircle } from 'lucide-react';
+import { Radio, Calendar, Download, Loader, Plus, Globe, MapPin, Star, StarOff, CheckCircle, AlertCircle, Timer, Users, CalendarClock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Helmet } from 'react-helmet';
 
+const formatDuration = (seconds) => {
+  if (!seconds || seconds <= 0) return '0h 00m';
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.round((seconds % 3600) / 60);
+  return `${hours}h ${minutes.toString().padStart(2, '0')}m`;
+};
+
 const Dashboard = () => {
   const [stats, setStats] = useState({ radios: 0, agendamentos: 0, gravacoes: 0 });
+  const [adminStats, setAdminStats] = useState(null);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [loadingAdminStats, setLoadingAdminStats] = useState(true);
   const [activeAgendamentos, setActiveAgendamentos] = useState([]);
   const [formData, setFormData] = useState({
     nome: '',
@@ -59,11 +68,26 @@ const Dashboard = () => {
     setLoadingStats(false);
   }, [user, toast]);
 
+  const fetchAdminStats = useCallback(async () => {
+    if (!user || !user.is_admin) return;
+    setLoadingAdminStats(true);
+    try {
+      const data = await apiClient.getAdminQuickStats();
+      setAdminStats(data);
+    } catch (error) {
+      // Silenciosamente falha se não for admin
+      setAdminStats(null);
+    } finally {
+      setLoadingAdminStats(false);
+    }
+  }, [user]);
+
   useEffect(() => {
     if (user) {
       fetchStats();
+      fetchAdminStats();
     }
-  }, [user, fetchStats]);
+  }, [user, fetchStats, fetchAdminStats]);
 
   // Validação do stream URL
   useEffect(() => {
@@ -257,6 +281,96 @@ const Dashboard = () => {
             onNavigate={() => navigate('/gravacoes')}
           />
         </motion.div>
+
+        {/* Admin Stats - 4 Cards */}
+        {user?.is_admin && adminStats && (
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mt-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            <div className="relative overflow-hidden rounded-xl border border-slate-800 bg-gradient-to-br from-cyan-600/50 via-cyan-500/30 to-slate-900 p-5 shadow-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-slate-300 text-sm">Tempo total gravado</p>
+                  {loadingAdminStats ? (
+                    <Loader className="w-6 h-6 animate-spin mt-1 text-cyan-400" />
+                  ) : (
+                    <>
+                      <p className="text-2xl font-semibold text-white mt-1">{formatDuration(adminStats?.total_duration_seconds || 0)}</p>
+                      <p className="text-xs text-slate-400 mt-1">{adminStats?.total_duration_hours || 0} horas acumuladas</p>
+                    </>
+                  )}
+                </div>
+                <div className="p-3 bg-slate-900/40 border border-slate-800 rounded-lg">
+                  <Timer className="w-5 h-5 text-cyan-300" />
+                </div>
+              </div>
+              <div className="absolute inset-0 pointer-events-none bg-gradient-to-tr from-white/5 via-transparent to-transparent" />
+            </div>
+
+            <div className="relative overflow-hidden rounded-xl border border-slate-800 bg-gradient-to-br from-emerald-600/50 via-emerald-500/30 to-slate-900 p-5 shadow-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-slate-300 text-sm">Usuários cadastrados</p>
+                  {loadingAdminStats ? (
+                    <Loader className="w-6 h-6 animate-spin mt-1 text-emerald-400" />
+                  ) : (
+                    <>
+                      <p className="text-2xl font-semibold text-white mt-1">{adminStats?.total_users ?? '--'}</p>
+                      <p className="text-xs text-slate-400 mt-1">inclui todos os perfis ativos</p>
+                    </>
+                  )}
+                </div>
+                <div className="p-3 bg-slate-900/40 border border-slate-800 rounded-lg">
+                  <Users className="w-5 h-5 text-emerald-300" />
+                </div>
+              </div>
+              <div className="absolute inset-0 pointer-events-none bg-gradient-to-tr from-white/5 via-transparent to-transparent" />
+            </div>
+
+            <div className="relative overflow-hidden rounded-xl border border-slate-800 bg-gradient-to-br from-amber-600/40 via-amber-500/20 to-slate-900 p-5 shadow-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-slate-300 text-sm">Quem mais agenda</p>
+                  {loadingAdminStats ? (
+                    <Loader className="w-6 h-6 animate-spin mt-1 text-amber-400" />
+                  ) : (
+                    <>
+                      <p className="text-2xl font-semibold text-white mt-1">{adminStats?.top_scheduler?.nome || 'Sem dados'}</p>
+                      <p className="text-xs text-slate-400 mt-1">{adminStats?.top_scheduler ? `${adminStats.top_scheduler.total_agendamentos} agendamentos` : 'Nenhum agendamento ainda'}</p>
+                    </>
+                  )}
+                </div>
+                <div className="p-3 bg-slate-900/40 border border-slate-800 rounded-lg">
+                  <CalendarClock className="w-5 h-5 text-amber-300" />
+                </div>
+              </div>
+              <div className="absolute inset-0 pointer-events-none bg-gradient-to-tr from-white/5 via-transparent to-transparent" />
+            </div>
+
+            <div className="relative overflow-hidden rounded-xl border border-slate-800 bg-gradient-to-br from-fuchsia-600/40 via-fuchsia-500/20 to-slate-900 p-5 shadow-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-slate-300 text-sm">Rádio com mais horas</p>
+                  {loadingAdminStats ? (
+                    <Loader className="w-6 h-6 animate-spin mt-1 text-fuchsia-400" />
+                  ) : (
+                    <>
+                      <p className="text-2xl font-semibold text-white mt-1">{adminStats?.top_radio?.nome || 'Sem dados'}</p>
+                      <p className="text-xs text-slate-400 mt-1">{adminStats?.top_radio ? formatDuration(adminStats.top_radio.total_duration_seconds) : 'Grave para começar a medir'}</p>
+                    </>
+                  )}
+                </div>
+                <div className="p-3 bg-slate-900/40 border border-slate-800 rounded-lg">
+                  <Radio className="w-5 h-5 text-fuchsia-300" />
+                </div>
+              </div>
+              <div className="absolute inset-0 pointer-events-none bg-gradient-to-tr from-white/5 via-transparent to-transparent" />
+            </div>
+          </motion.div>
+        )}
 
         <motion.div
           className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8"

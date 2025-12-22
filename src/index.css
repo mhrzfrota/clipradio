@@ -32,7 +32,7 @@
 }
 
 body {
-  background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--card)) 25%, hsl(var(--secondary)) 50%, hsl(var(--muted)) 75%, hsl(var(--muted-foreground)/0.5) 100%);
+  background: hsl(var(--background));
   background-attachment: fixed;
   font-family: 'Inter', sans-serif;
   color: hsl(var(--foreground));
