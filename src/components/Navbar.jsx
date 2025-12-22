@@ -114,7 +114,7 @@ const Navbar = () => {
               <div className="absolute right-0 top-12 w-80 bg-slate-900 border border-slate-800 rounded-lg shadow-2xl overflow-hidden z-50">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
                   <div>
-                    <p className="text-sm font-semibold text-white">Gravacoes em andamento</p>
+                    <p className="text-sm font-semibold text-white">Gravações em andamento</p>
                     <p className="text-xs text-slate-400">{ongoingRecords.length} ativas</p>
                   </div>
                   <button onClick={() => setShowRecordingPanel(false)} className="text-slate-400 hover:text-white">
@@ -123,7 +123,7 @@ const Navbar = () => {
                 </div>
                 <div className="max-h-72 overflow-y-auto">
                   {ongoingRecords.length === 0 ? (
-                    <div className="px-4 py-6 text-sm text-slate-400 text-center">Nenhuma gravacao no momento.</div>
+                    <div className="px-4 py-6 text-sm text-slate-400 text-center">Nenhuma gravação no momento.</div>
                   ) : (
                     ongoingRecords.map((rec) => (
                       <div key={rec.id} className="px-4 py-3 flex items-center justify-between border-b border-slate-800 last:border-0">
@@ -147,7 +147,7 @@ const Navbar = () => {
                   onClick={() => setShowRecordingPanel(false)}
                 >
                   <FileText className="w-4 h-4" />
-                  Abrir gravacoes
+                  Abrir gravações
                 </NavLink>
               </div>
             )}

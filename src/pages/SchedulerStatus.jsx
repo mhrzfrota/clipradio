@@ -104,11 +104,11 @@ const SchedulerStatus = () => {
                 <p className="text-slate-400 mb-6">{isRunning ? 'Verificando por gravações a cada minuto.' : 'Clique em iniciar para começar a verificação.'}</p>
                 {isRunning ? (
                     <Button onClick={stopScheduler} className="btn btn-danger w-full">
-                        <Power className="mr-2 h-4 w-4" /> Parar Agendador
+                        <Power className="mr-2 h-4 w-4" /> Parar agendador
                     </Button>
                 ) : (
                     <Button onClick={startScheduler} className="btn btn-primary w-full">
-                        <Play className="mr-2 h-4 w-4" /> Iniciar Agendador
+                        <Play className="mr-2 h-4 w-4" /> Iniciar agendador
                     </Button>
                 )}
             </motion.div>

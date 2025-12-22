@@ -273,7 +273,7 @@ const NovaGravacao = ({ onBatchStart }) => {
               {loading ? (
                 <><Loader className="w-5 h-5 mr-2 animate-spin" />Iniciando...</>
               ) : (
-                <><Layers className="w-5 h-5 mr-2" /> Iniciar Gravação em Massa</>
+                <><Layers className="w-5 h-5 mr-2" /> Iniciar gravação em Massa</>
               )}
             </Button>
           </div>

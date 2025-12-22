@@ -90,7 +90,7 @@ export default function GravadorManual() {
         className="container mx-auto max-w-4xl px-4 py-8"
       >
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-4xl font-bold tracking-tight text-slate-50">Gravação Manual</h1>
+          <h1 className="text-4xl font-bold tracking-tight text-slate-50">Gravação manual</h1>
         </div>
 
         <Card className="bg-slate-900/70 border-slate-800 backdrop-blur-sm">
@@ -98,7 +98,7 @@ export default function GravadorManual() {
             <div className="flex items-center gap-4">
               <Radio className="w-8 h-8 text-cyan-400" />
               <div>
-                <CardTitle className="text-2xl font-semibold text-slate-50">Iniciar Nova Gravação</CardTitle>
+                <CardTitle className="text-2xl font-semibold text-slate-50">Iniciar nova gravação</CardTitle>
                 <CardDescription className="text-slate-400">
                   Selecione uma rádio e a duração para começar a gravar imediatamente.
                 </CardDescription>
@@ -127,7 +127,7 @@ export default function GravadorManual() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="duration" className="text-slate-300">Duração da Gravação (em minutos)</Label>
+                <Label htmlFor="duration" className="text-slate-300">Duração da gravação (em minutos)</Label>
                 <Input
                   id="duration"
                   type="number"
@@ -158,7 +158,7 @@ export default function GravadorManual() {
                 ) : (
                   <div className="flex items-center justify-center">
                     <Clock className="mr-2 h-5 w-5" />
-                    Iniciar Gravação
+                    Iniciar gravação
                   </div>
                 )}
               </Button>

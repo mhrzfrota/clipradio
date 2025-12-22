@@ -22,7 +22,7 @@ const Profile = () => {
   return (
     <>
       <Helmet>
-        <title>Meu Perfil</title>
+        <title>Meu perfil</title>
         <meta name="description" content="Dados da sua conta." />
       </Helmet>
       <div className="p-4 md:p-6 max-w-4xl mx-auto text-white">
@@ -33,7 +33,7 @@ const Profile = () => {
         >
           <User className="w-8 h-8 mr-3 text-cyan-400" />
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold">Meu Perfil</h1>
+            <h1 className="text-3xl md:text-4xl font-bold">Meu perfil</h1>
             <p className="text-md text-slate-400">Informações da sua conta.</p>
           </div>
         </motion.div>
