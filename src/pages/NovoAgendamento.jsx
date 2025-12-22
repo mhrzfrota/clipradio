@@ -13,7 +13,7 @@ const NovoAgendamento = () => {
   return (
     <>
       <Helmet>
-        <title>Novo Agendamento</title>
+        <title>Novo agendamento</title>
         <meta name="description" content="Crie um novo agendamento de gravação para uma de suas rádios." />
       </Helmet>
       <div className="min-h-screen p-6 flex justify-center items-center">
@@ -24,7 +24,7 @@ const NovoAgendamento = () => {
                 <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center text-white">
                       <Calendar className="w-6 h-6 mr-3 text-cyan-400" />
-                      Criar Novo Agendamento
+                      Criar novo agendamento
                     </CardTitle>
                     <Button variant="ghost" size="icon" onClick={() => navigate('/agendamentos')}>
                         <ArrowLeft className="h-5 w-5" />

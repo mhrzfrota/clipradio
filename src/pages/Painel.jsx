@@ -199,7 +199,7 @@ import React, { useState, useEffect, useCallback } from 'react';
                 </div>
                 <Button className="btn btn-primary" onClick={() => navigate('/cadastro-radios')}>
                   <Plus className="w-5 h-5 mr-2" />
-                  Adicionar Rádio
+                  Adicionar rádio
                 </Button>
               </div>
             </motion.div>

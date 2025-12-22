@@ -483,7 +483,7 @@ const CadastroRadios = () => {
 
                   <div className="flex gap-3">
                     <Button type="submit" className="flex-1" disabled={saving}>
-                      {saving ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Adicionar Rádio'}
+                      {saving ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Adicionar rádio'}
                     </Button>
                     {editingId && (
                       <Button type="button" variant="outline" onClick={resetForm}>
@@ -526,7 +526,6 @@ const CadastroRadios = () => {
                 </div>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                <div className="max-h-[60vh] overflow-y-auto pr-2">
                   {loading ? (
                     <div className="flex justify-center py-12">
                       <Loader className="w-10 h-10 animate-spin text-cyan-400" />
@@ -766,7 +765,6 @@ const CadastroRadios = () => {
                       ))}
                     </div>
                   )}
-                </div>
                 <div className="flex items-center justify-between text-xs text-slate-400">
                   <span>Página {radiosPage} de {totalPages}</span>
                   <div className="flex items-center gap-2">

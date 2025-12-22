@@ -220,7 +220,7 @@ const Agendamentos = () => {
               </Button>
               <Button onClick={handleAddNew} className="btn btn-primary">
                 <Plus className="w-5 h-5 mr-2"/>
-                Novo Agendamento
+                Novo agendamento
               </Button>
             </div>
           </motion.div>
@@ -341,7 +341,7 @@ const Agendamentos = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center text-white text-xl">
               <Calendar className="w-6 h-6 mr-3 text-cyan-400" />
-              Criar Novo Agendamento
+              Criar novo agendamento
             </DialogTitle>
           </DialogHeader>
           <AgendamentoForm onSuccess={handleModalClose} />

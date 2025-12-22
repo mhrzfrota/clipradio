@@ -382,7 +382,7 @@ const Dashboard = () => {
                   </div>
 
                   <Button type="submit" className="w-full" disabled={saving}>
-                    {saving ? 'Salvando...' : 'Adicionar Rádio'}
+                    {saving ? 'Salvando...' : 'Adicionar rádio'}
                   </Button>
                 </form>
               </CardContent>
