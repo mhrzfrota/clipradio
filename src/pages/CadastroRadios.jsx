@@ -366,7 +366,7 @@ const CadastroRadios = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="lg:col-span-1">
-            <Card className="bg-slate-800/40 border-slate-700/60">
+            <Card className="bg-slate-800/40 border-slate-700/60 lg:sticky lg:top-6">
               <CardHeader>
                 <CardTitle className="flex items-center text-white">
                   <Plus className="w-6 h-6 mr-3 text-cyan-400" />
@@ -534,10 +534,10 @@ const CadastroRadios = () => {
                     <div className="text-center py-12 text-slate-400">Nenhuma rádio cadastrada ainda.</div>
                   ) : viewMode === 'card' ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {paginatedRadios.map((radio) => (
+                      {paginatedRadios.map((radio, index) => (
                       <div
                         key={radio.id}
-                        className="group relative bg-gradient-to-br from-slate-900/60 to-slate-900/40 border border-slate-700/60 rounded-xl overflow-hidden hover:border-cyan-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/5"
+                        className={`group relative ${index % 2 === 0 ? 'bg-gradient-to-br from-slate-800/70 to-slate-800/50' : 'bg-gradient-to-br from-slate-900/60 to-slate-900/40'} border ${index % 2 === 0 ? 'border-slate-600/60' : 'border-slate-700/60'} rounded-xl overflow-hidden hover:border-cyan-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/5`}
                       >
                         {/* Header com nome e favorito */}
                         <div className="p-4 pb-3 border-b border-slate-800/50">
@@ -671,10 +671,10 @@ const CadastroRadios = () => {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {paginatedRadios.map((radio) => (
+                      {paginatedRadios.map((radio, index) => (
                       <div
                         key={radio.id}
-                        className="p-3 bg-slate-900/40 border border-slate-800 rounded-lg flex items-center gap-3"
+                        className={`p-3 ${index % 2 === 0 ? 'bg-slate-800/60' : 'bg-slate-900/40'} border ${index % 2 === 0 ? 'border-slate-700' : 'border-slate-800'} rounded-lg flex items-center gap-3 hover:border-cyan-500/30 transition-all duration-200`}
                       >
                         <Button
                           variant="ghost"
