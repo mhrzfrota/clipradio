@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
 import { motion } from 'framer-motion';
 
@@ -67,6 +67,7 @@ const GravacoesStats = ({ stats }) => (
 );
 
 const GravacoesFilter = ({ filters, setFilters, radios, estadoOptions, cidadeOptions }) => {
+  const dateInputRef = useRef(null);
 
   const handleFilterChange = (e) => {
 
@@ -76,6 +77,15 @@ const GravacoesFilter = ({ filters, setFilters, radios, estadoOptions, cidadeOpt
 
   };
 
+  const handleDatePickerClick = () => {
+    const input = dateInputRef.current;
+    if (!input) return;
+    if (typeof input.showPicker === 'function') {
+      input.showPicker();
+    } else {
+      input.focus();
+    }
+  };
 
 
   return (
@@ -152,9 +162,17 @@ const GravacoesFilter = ({ filters, setFilters, radios, estadoOptions, cidadeOpt
 
           <label htmlFor="filterDate" className="block text-sm font-medium text-muted-foreground mb-2">Filtrar por Data</label>
 
-          <div className="relative">
+          <div className="relative cursor-pointer" onClick={handleDatePickerClick}>
 
-            <input id="filterDate" name="data" type="date" value={filters.data} onChange={handleFilterChange} className="input appearance-none pr-10" />
+            <input
+              ref={dateInputRef}
+              id="filterDate"
+              name="data"
+              type="date"
+              value={filters.data}
+              onChange={handleFilterChange}
+              className="input appearance-none pr-10"
+            />
 
             <CalendarDays className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
 
