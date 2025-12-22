@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { Radio, Globe, Plus, Edit, Trash2, Star, StarOff, Loader, MapPin, Play, Pause, CheckCircle, AlertCircle, LayoutGrid, List, CircleDot, Clock } from 'lucide-react'
+import { Radio, Globe, Plus, Edit, Trash2, Star, StarOff, Loader, MapPin, Play, Pause, CheckCircle, AlertCircle, LayoutGrid, List, CircleDot, Clock, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { Button } from '@/components/ui/button'
 import apiClient from '@/lib/apiClient'
@@ -27,6 +27,7 @@ const CadastroRadios = () => {
   const [isBuffering, setIsBuffering] = useState(false)
   const [streamStatus, setStreamStatus] = useState({ state: 'idle', message: '' })
   const [viewMode, setViewMode] = useState('card')
+  const [radiosPage, setRadiosPage] = useState(1)
   const [scheduledRadioIds, setScheduledRadioIds] = useState(new Set())
   const [recordPanelRadioId, setRecordPanelRadioId] = useState(null)
   const [startingRecording, setStartingRecording] = useState(false)
@@ -43,6 +44,18 @@ const CadastroRadios = () => {
   const audioRef = useRef(null)
   const validationAudioRef = useRef(null)
   const { toast } = useToast()
+  const ITEMS_PER_PAGE = 10
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(radios.length / ITEMS_PER_PAGE)), [radios.length])
+  const paginatedRadios = useMemo(() => {
+    const startIndex = (radiosPage - 1) * ITEMS_PER_PAGE
+    return radios.slice(startIndex, startIndex + ITEMS_PER_PAGE)
+  }, [radios, radiosPage])
+  const canPrevPage = radiosPage > 1
+  const canNextPage = radiosPage < totalPages
+
+  useEffect(() => {
+    setRadiosPage((prev) => Math.min(prev, totalPages))
+  }, [totalPages])
 
   const resetForm = useCallback(() => {
     setFormData({ nome: '', stream_url: '', cidade: '', estado: '', favorita: false, bitrate_kbps: 128, output_format: 'mp3', audio_mode: 'stereo' })
@@ -512,16 +525,17 @@ const CadastroRadios = () => {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="flex justify-center py-12">
-                    <Loader className="w-10 h-10 animate-spin text-cyan-400" />
-                  </div>
-                ) : radios.length === 0 ? (
-                  <div className="text-center py-12 text-slate-400">Nenhuma rádio cadastrada ainda.</div>
-                ) : viewMode === 'card' ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {radios.map((radio) => (
+              <CardContent className="flex flex-col gap-4">
+                <div className="max-h-[60vh] overflow-y-auto pr-2">
+                  {loading ? (
+                    <div className="flex justify-center py-12">
+                      <Loader className="w-10 h-10 animate-spin text-cyan-400" />
+                    </div>
+                  ) : radios.length === 0 ? (
+                    <div className="text-center py-12 text-slate-400">Nenhuma rádio cadastrada ainda.</div>
+                  ) : viewMode === 'card' ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {paginatedRadios.map((radio) => (
                       <div
                         key={radio.id}
                         className="group relative bg-gradient-to-br from-slate-900/60 to-slate-900/40 border border-slate-700/60 rounded-xl overflow-hidden hover:border-cyan-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/5"
@@ -654,11 +668,11 @@ const CadastroRadios = () => {
                           </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {radios.map((radio) => (
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {paginatedRadios.map((radio) => (
                       <div
                         key={radio.id}
                         className="p-3 bg-slate-900/40 border border-slate-800 rounded-lg flex items-center gap-3"
@@ -749,9 +763,35 @@ const CadastroRadios = () => {
                           </Button>
                         </div>
                       </div>
-                    ))}
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span>Página {radiosPage} de {totalPages}</span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      onClick={() => setRadiosPage((prev) => Math.max(prev - 1, 1))}
+                      disabled={!canPrevPage || loading || radios.length === 0}
+                      title="Página anterior"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      onClick={() => setRadiosPage((prev) => Math.min(prev + 1, totalPages))}
+                      disabled={!canNextPage || loading || radios.length === 0}
+                      title="Próxima página"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
                   </div>
-                )}
+                </div>
               </CardContent>
             </Card>
           </motion.div>
