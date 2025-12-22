@@ -4,6 +4,7 @@ from models.gravacao import Gravacao
 from models.user import User
 from models.agendamento import Agendamento
 from models.radio import Radio
+from models.cliente import Cliente
 from utils.jwt_utils import token_required, decode_token
 from flask import request as flask_request
 from datetime import datetime
@@ -15,10 +16,43 @@ bp = Blueprint('gravacoes', __name__)
 def get_user_ctx():
     token = flask_request.headers.get('Authorization', '').replace('Bearer ', '')
     payload = decode_token(token) or {}
+    user_id = payload.get('user_id')
+    is_admin = payload.get('is_admin', False)
+    cidade = None
+    estado = None
+    if user_id and not is_admin:
+        user = User.query.get(user_id)
+        if user:
+            if user.cliente_id:
+                cliente = Cliente.query.get(user.cliente_id)
+                if cliente:
+                    cidade = cliente.cidade
+                    estado = cliente.estado
+            if not cidade and not estado:
+                cidade = user.cidade
+                estado = user.estado
     return {
-        'user_id': payload.get('user_id'),
-        'is_admin': payload.get('is_admin', False)
+        'user_id': user_id,
+        'is_admin': is_admin,
+        'cidade': cidade,
+        'estado': estado,
     }
+
+def _gravacao_access_allowed(gravacao, ctx):
+    if ctx.get('is_admin'):
+        return True
+    cidade = ctx.get('cidade')
+    estado = ctx.get('estado')
+    if cidade or estado:
+        radio = getattr(gravacao, 'radio', None)
+        if not radio:
+            return False
+        if cidade and (not radio.cidade or radio.cidade.lower() != cidade.lower()):
+            return False
+        if estado and (not radio.estado or radio.estado.upper() != estado.upper()):
+            return False
+        return True
+    return gravacao.user_id == ctx.get('user_id')
 
 @bp.route('', methods=['POST'])
 @token_required
@@ -26,11 +60,22 @@ def create_gravacao():
     """Cria um registro de gravação para o usuário autenticado"""
     ctx = get_user_ctx()
     user_id = ctx.get('user_id')
+    cidade = ctx.get('cidade')
+    estado = ctx.get('estado')
     data = request.get_json() or {}
 
     radio_id = data.get('radio_id')
     if not radio_id:
         return jsonify({'error': 'radio_id is required'}), 400
+
+    if not ctx.get('is_admin') and (cidade or estado):
+        radio = Radio.query.get(radio_id)
+        if not radio:
+            return jsonify({'error': 'Radio not found'}), 404
+        if cidade and (not radio.cidade or radio.cidade.lower() != cidade.lower()):
+            return jsonify({'error': 'Cidade not allowed for this user'}), 403
+        if estado and (not radio.estado or radio.estado.upper() != estado.upper()):
+            return jsonify({'error': 'Estado not allowed for this user'}), 403
 
     gravacao = Gravacao(
         user_id=user_id,
@@ -54,11 +99,20 @@ def get_gravacoes():
     ctx = get_user_ctx()
     user_id = ctx.get('user_id')
     is_admin = ctx.get('is_admin', False)
+    cidade_scope = ctx.get('cidade')
+    estado_scope = ctx.get('estado')
     include_stats = (request.args.get('include_stats') or '').lower() == 'true'
 
     query = Gravacao.query
     if not is_admin:
-        query = query.filter_by(user_id=user_id)
+        if cidade_scope or estado_scope:
+            query = query.join(Radio, Gravacao.radio_id == Radio.id)
+            if cidade_scope:
+                query = query.filter(db.func.lower(Radio.cidade) == cidade_scope.lower())
+            if estado_scope:
+                query = query.filter(db.func.upper(Radio.estado) == estado_scope.upper())
+        else:
+            query = query.filter_by(user_id=user_id)
     
     # Filtros
     radio_id = request.args.get('radio_id')
@@ -111,10 +165,19 @@ def get_ongoing():
     ctx = get_user_ctx()
     user_id = ctx.get('user_id')
     is_admin = ctx.get('is_admin', False)
+    cidade_scope = ctx.get('cidade')
+    estado_scope = ctx.get('estado')
 
     query = Gravacao.query.filter(Gravacao.status.in_(('iniciando', 'gravando', 'processando')))
     if not is_admin:
-        query = query.filter_by(user_id=user_id)
+        if cidade_scope or estado_scope:
+            query = query.join(Radio, Gravacao.radio_id == Radio.id)
+            if cidade_scope:
+                query = query.filter(db.func.lower(Radio.cidade) == cidade_scope.lower())
+            if estado_scope:
+                query = query.filter(db.func.upper(Radio.estado) == estado_scope.upper())
+        else:
+            query = query.filter_by(user_id=user_id)
 
     gravacoes = query.order_by(Gravacao.criado_em.desc()).all()
     gravacoes = [hydrate_gravacao_metadata(g, autocommit=True) for g in gravacoes]
@@ -126,8 +189,10 @@ def get_gravacao(gravacao_id):
     ctx = get_user_ctx()
     user_id = ctx.get('user_id')
     is_admin = ctx.get('is_admin', False)
-    gravacao = Gravacao.query.filter_by(id=gravacao_id).first() if is_admin else Gravacao.query.filter_by(id=gravacao_id, user_id=user_id).first()
+    gravacao = Gravacao.query.filter_by(id=gravacao_id).first()
     if not gravacao:
+        return jsonify({'error': 'Gravacao not found'}), 404
+    if not is_admin and not _gravacao_access_allowed(gravacao, ctx):
         return jsonify({'error': 'Gravacao not found'}), 404
     gravacao = hydrate_gravacao_metadata(gravacao, autocommit=True)
     return jsonify(gravacao.to_dict(include_radio=True)), 200
@@ -138,8 +203,10 @@ def delete_gravacao(gravacao_id):
     ctx = get_user_ctx()
     user_id = ctx.get('user_id')
     is_admin = ctx.get('is_admin', False)
-    gravacao = Gravacao.query.filter_by(id=gravacao_id).first() if is_admin else Gravacao.query.filter_by(id=gravacao_id, user_id=user_id).first()
+    gravacao = Gravacao.query.filter_by(id=gravacao_id).first()
     if not gravacao:
+        return jsonify({'error': 'Gravacao not found'}), 404
+    if not is_admin and not _gravacao_access_allowed(gravacao, ctx):
         return jsonify({'error': 'Gravacao not found'}), 404
     
     db.session.delete(gravacao)
@@ -157,6 +224,8 @@ def batch_delete():
     ctx = get_user_ctx()
     user_id = ctx.get('user_id')
     is_admin = ctx.get('is_admin', False)
+    cidade_scope = ctx.get('cidade')
+    estado_scope = ctx.get('estado')
     data = request.get_json()
     gravacao_ids = data.get('gravacao_ids', [])
     
@@ -165,7 +234,14 @@ def batch_delete():
     
     gravacoes = Gravacao.query.filter(Gravacao.id.in_(gravacao_ids))
     if not is_admin:
-        gravacoes = gravacoes.filter(Gravacao.user_id == user_id)
+        if cidade_scope or estado_scope:
+            gravacoes = gravacoes.join(Radio, Gravacao.radio_id == Radio.id)
+            if cidade_scope:
+                gravacoes = gravacoes.filter(db.func.lower(Radio.cidade) == cidade_scope.lower())
+            if estado_scope:
+                gravacoes = gravacoes.filter(db.func.upper(Radio.estado) == estado_scope.upper())
+        else:
+            gravacoes = gravacoes.filter(Gravacao.user_id == user_id)
     gravacoes = gravacoes.all()
     
     for gravacao in gravacoes:
@@ -185,7 +261,20 @@ def get_stats():
     ctx = get_user_ctx()
     user_id = ctx.get('user_id')
     is_admin = ctx.get('is_admin', False)
-    gravacoes = Gravacao.query.all() if is_admin else Gravacao.query.filter_by(user_id=user_id).all()
+    cidade_scope = ctx.get('cidade')
+    estado_scope = ctx.get('estado')
+    if is_admin:
+        gravacoes = Gravacao.query.all()
+    else:
+        if cidade_scope or estado_scope:
+            query = Gravacao.query.join(Radio, Gravacao.radio_id == Radio.id)
+            if cidade_scope:
+                query = query.filter(db.func.lower(Radio.cidade) == cidade_scope.lower())
+            if estado_scope:
+                query = query.filter(db.func.upper(Radio.estado) == estado_scope.upper())
+            gravacoes = query.all()
+        else:
+            gravacoes = Gravacao.query.filter_by(user_id=user_id).all()
 
     # Garantir que duração/tamanho reflitam o arquivo salvo
     gravacoes = [hydrate_gravacao_metadata(g, autocommit=True) for g in gravacoes]

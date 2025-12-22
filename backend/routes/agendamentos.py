@@ -1,6 +1,9 @@
 from flask import Blueprint, request, jsonify, Response
 from app import db
 from models.agendamento import Agendamento
+from models.radio import Radio
+from models.user import User
+from models.cliente import Cliente
 from utils.jwt_utils import token_required, decode_token
 from flask import request as flask_request
 from datetime import datetime, timedelta
@@ -36,9 +39,26 @@ bp = Blueprint('agendamentos', __name__)
 def get_user_ctx():
     token = flask_request.headers.get('Authorization', '').replace('Bearer ', '')
     payload = decode_token(token) or {}
+    user_id = payload.get('user_id')
+    is_admin = payload.get('is_admin', False)
+    cidade = None
+    estado = None
+    if user_id and not is_admin:
+        user = User.query.get(user_id)
+        if user:
+            if user.cliente_id:
+                cliente = Cliente.query.get(user.cliente_id)
+                if cliente:
+                    cidade = cliente.cidade
+                    estado = cliente.estado
+            if not cidade and not estado:
+                cidade = user.cidade
+                estado = user.estado
     return {
-        'user_id': payload.get('user_id'),
-        'is_admin': payload.get('is_admin', False),
+        'user_id': user_id,
+        'is_admin': is_admin,
+        'cidade': cidade,
+        'estado': estado,
     }
 
 
@@ -277,15 +297,41 @@ def _generate_pdf(rows, start_date=None, end_date=None):
     )
     return pdf_bytes
 
+
+def _agendamento_access_allowed(agendamento, ctx):
+    if ctx.get('is_admin'):
+        return True
+    cidade = ctx.get('cidade')
+    estado = ctx.get('estado')
+    if cidade or estado:
+        radio = getattr(agendamento, 'radio', None)
+        if not radio:
+            return False
+        if cidade and (not radio.cidade or radio.cidade.lower() != cidade.lower()):
+            return False
+        if estado and (not radio.estado or radio.estado.upper() != estado.upper()):
+            return False
+        return True
+    return agendamento.user_id == ctx.get('user_id')
+
 @bp.route('', methods=['GET'])
 @token_required
 def get_agendamentos():
     ctx = get_user_ctx()
     user_id = ctx.get('user_id')
     is_admin = ctx.get('is_admin', False)
+    cidade = ctx.get('cidade')
+    estado = ctx.get('estado')
     query = Agendamento.query
     if not is_admin:
-        query = query.filter_by(user_id=user_id)
+        if cidade or estado:
+            query = query.join(Radio, Agendamento.radio_id == Radio.id)
+            if cidade:
+                query = query.filter(db.func.lower(Radio.cidade) == cidade.lower())
+            if estado:
+                query = query.filter(db.func.upper(Radio.estado) == estado.upper())
+        else:
+            query = query.filter_by(user_id=user_id)
     agendamentos = query.order_by(Agendamento.data_inicio.desc()).all()
     return jsonify([a.to_dict(include_radio=True) for a in agendamentos]), 200
 
@@ -296,13 +342,22 @@ def export_agendamentos():
     ctx = get_user_ctx()
     user_id = ctx.get('user_id')
     is_admin = ctx.get('is_admin', False)
+    cidade = ctx.get('cidade')
+    estado = ctx.get('estado')
     export_format = request.args.get('format', 'csv').lower()
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
 
     query = Agendamento.query
     if not is_admin:
-        query = query.filter_by(user_id=user_id)
+        if cidade or estado:
+            query = query.join(Radio, Agendamento.radio_id == Radio.id)
+            if cidade:
+                query = query.filter(db.func.lower(Radio.cidade) == cidade.lower())
+            if estado:
+                query = query.filter(db.func.upper(Radio.estado) == estado.upper())
+        else:
+            query = query.filter_by(user_id=user_id)
     if start_date:
         try:
             start_dt = datetime.fromisoformat(start_date)
@@ -345,8 +400,10 @@ def get_agendamento(agendamento_id):
     ctx = get_user_ctx()
     user_id = ctx.get('user_id')
     is_admin = ctx.get('is_admin', False)
-    agendamento = Agendamento.query.filter_by(id=agendamento_id).first() if is_admin else Agendamento.query.filter_by(id=agendamento_id, user_id=user_id).first()
+    agendamento = Agendamento.query.filter_by(id=agendamento_id).first()
     if not agendamento:
+        return jsonify({'error': 'Agendamento not found'}), 404
+    if not is_admin and not _agendamento_access_allowed(agendamento, ctx):
         return jsonify({'error': 'Agendamento not found'}), 404
     return jsonify(agendamento.to_dict(include_radio=True)), 200
 
@@ -355,10 +412,21 @@ def get_agendamento(agendamento_id):
 def create_agendamento():
     ctx = get_user_ctx()
     user_id = ctx.get('user_id')
+    cidade = ctx.get('cidade')
+    estado = ctx.get('estado')
     data = request.get_json()
     
     if not data.get('radio_id') or not data.get('data_inicio') or not data.get('duracao_minutos'):
         return jsonify({'error': 'radio_id, data_inicio and duracao_minutos are required'}), 400
+
+    if not ctx.get('is_admin') and (cidade or estado):
+        radio = Radio.query.get(data['radio_id'])
+        if not radio:
+            return jsonify({'error': 'Radio not found'}), 404
+        if cidade and (not radio.cidade or radio.cidade.lower() != cidade.lower()):
+            return jsonify({'error': 'Cidade not allowed for this user'}), 403
+        if estado and (not radio.estado or radio.estado.upper() != estado.upper()):
+            return jsonify({'error': 'Estado not allowed for this user'}), 403
     
     agendamento = Agendamento(
         user_id=user_id,
@@ -396,11 +464,23 @@ def update_agendamento(agendamento_id):
     ctx = get_user_ctx()
     user_id = ctx.get('user_id')
     is_admin = ctx.get('is_admin', False)
-    agendamento = Agendamento.query.filter_by(id=agendamento_id).first() if is_admin else Agendamento.query.filter_by(id=agendamento_id, user_id=user_id).first()
+    agendamento = Agendamento.query.filter_by(id=agendamento_id).first()
     if not agendamento:
+        return jsonify({'error': 'Agendamento not found'}), 404
+    if not is_admin and not _agendamento_access_allowed(agendamento, ctx):
         return jsonify({'error': 'Agendamento not found'}), 404
     
     data = request.get_json()
+    if 'radio_id' in data and not is_admin and (ctx.get('cidade') or ctx.get('estado')):
+        radio = Radio.query.get(data['radio_id'])
+        if not radio:
+            return jsonify({'error': 'Radio not found'}), 404
+        cidade = ctx.get('cidade')
+        estado = ctx.get('estado')
+        if cidade and (not radio.cidade or radio.cidade.lower() != cidade.lower()):
+            return jsonify({'error': 'Cidade not allowed for this user'}), 403
+        if estado and (not radio.estado or radio.estado.upper() != estado.upper()):
+            return jsonify({'error': 'Estado not allowed for this user'}), 403
     if 'radio_id' in data:
         agendamento.radio_id = data['radio_id']
     if 'data_inicio' in data:
@@ -440,8 +520,10 @@ def delete_agendamento(agendamento_id):
     ctx = get_user_ctx()
     user_id = ctx.get('user_id')
     is_admin = ctx.get('is_admin', False)
-    agendamento = Agendamento.query.filter_by(id=agendamento_id).first() if is_admin else Agendamento.query.filter_by(id=agendamento_id, user_id=user_id).first()
+    agendamento = Agendamento.query.filter_by(id=agendamento_id).first()
     if not agendamento:
+        return jsonify({'error': 'Agendamento not found'}), 404
+    if not is_admin and not _agendamento_access_allowed(agendamento, ctx):
         return jsonify({'error': 'Agendamento not found'}), 404
     
     db.session.delete(agendamento)
@@ -463,8 +545,10 @@ def toggle_status(agendamento_id):
     ctx = get_user_ctx()
     user_id = ctx.get('user_id')
     is_admin = ctx.get('is_admin', False)
-    agendamento = Agendamento.query.filter_by(id=agendamento_id).first() if is_admin else Agendamento.query.filter_by(id=agendamento_id, user_id=user_id).first()
+    agendamento = Agendamento.query.filter_by(id=agendamento_id).first()
     if not agendamento:
+        return jsonify({'error': 'Agendamento not found'}), 404
+    if not is_admin and not _agendamento_access_allowed(agendamento, ctx):
         return jsonify({'error': 'Agendamento not found'}), 404
     
     agendamento.status = 'inativo' if agendamento.status == 'agendado' else 'agendado'
