@@ -14,8 +14,7 @@ const emptyUserForm = {
   email: '',
   nome: '',
   password: '',
-  cidade: '',
-  estado: '',
+  cliente_id: '',
   is_admin: false,
   ativo: true,
 };
@@ -24,7 +23,6 @@ const emptyClientForm = {
   nome: '',
   cidade: '',
   estado: '',
-  user_id: '',
 };
 
 const Admin = () => {
@@ -76,13 +74,13 @@ const Admin = () => {
     }
   };
 
-  const userById = useMemo(() => {
+  const clientById = useMemo(() => {
     const map = new Map();
-    users.forEach((u) => {
-      map.set(u.id, u);
+    clients.forEach((client) => {
+      map.set(client.id, client);
     });
     return map;
-  }, [users]);
+  }, [clients]);
 
   const estadoOptions = useMemo(() => {
     const estadoSet = new Set();
@@ -130,8 +128,7 @@ const Admin = () => {
     const payload = {
       email: userForm.email.trim(),
       nome: userForm.nome.trim() || undefined,
-      cidade: userForm.cidade ? userForm.cidade : null,
-      estado: userForm.estado ? userForm.estado : null,
+      cliente_id: userForm.cliente_id ? userForm.cliente_id : null,
       ativo: userForm.ativo,
       is_admin: userForm.is_admin,
     };
@@ -168,7 +165,6 @@ const Admin = () => {
       nome: clientForm.nome.trim(),
       cidade: clientForm.cidade ? clientForm.cidade : null,
       estado: clientForm.estado ? clientForm.estado : null,
-      user_id: clientForm.user_id ? clientForm.user_id : null,
     };
 
     setSavingClient(true);
@@ -195,8 +191,7 @@ const Admin = () => {
       email: target.email || '',
       nome: target.nome || '',
       password: '',
-      cidade: target.cidade || '',
-      estado: target.estado || '',
+      cliente_id: target.cliente_id || '',
       is_admin: Boolean(target.is_admin),
       ativo: target.ativo !== false,
     });
@@ -208,7 +203,6 @@ const Admin = () => {
       nome: target.nome || '',
       cidade: target.cidade || '',
       estado: target.estado || '',
-      user_id: target.user_id || '',
     });
   };
 
@@ -271,7 +265,7 @@ const Admin = () => {
             </div>
             <div>
               <h2 className="text-xl font-semibold text-white">Clientes</h2>
-              <p className="text-sm text-slate-400">Vincule clientes a cidades e usuarios.</p>
+              <p className="text-sm text-slate-400">Vincule clientes a cidades.</p>
             </div>
           </div>
 
@@ -314,20 +308,6 @@ const Admin = () => {
                 ))}
               </select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="cliente-user">Usuario</Label>
-              <select
-                id="cliente-user"
-                className="input"
-                value={clientForm.user_id}
-                onChange={(event) => setClientForm((prev) => ({ ...prev, user_id: event.target.value }))}
-              >
-                <option value="">Sem usuario</option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>{u.nome || u.email}</option>
-                ))}
-              </select>
-            </div>
             <div className="flex items-center gap-2 md:col-span-2 xl:col-span-4">
               <Button type="submit" disabled={savingClient}>
                 <UserPlus className="w-4 h-4 mr-2" />
@@ -345,32 +325,26 @@ const Admin = () => {
             {clients.length === 0 ? (
               <div className="text-sm text-slate-400">Nenhum cliente cadastrado.</div>
             ) : (
-              clients.map((client) => {
-                const clientUser = client.user_id ? userById.get(client.user_id) : null;
-                return (
-                  <div key={client.id} className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg border border-slate-800 bg-slate-900/50">
-                    <div>
-                      <p className="text-white font-medium">{client.nome}</p>
-                      <p className="text-xs text-slate-400">
-                        {(client.cidade || 'Cidade nao definida')}{client.estado ? ` - ${client.estado}` : ''}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {clientUser ? `Usuario: ${clientUser.nome || clientUser.email}` : 'Sem usuario'}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" variant="ghost" onClick={() => handleEditClient(client)}>
-                        <Pencil className="w-4 h-4 mr-1" />
-                        Editar
-                      </Button>
-                      <Button size="sm" variant="destructive" onClick={() => handleDeleteClient(client.id)}>
-                        <Trash2 className="w-4 h-4 mr-1" />
-                        Excluir
-                      </Button>
-                    </div>
+              clients.map((client) => (
+                <div key={client.id} className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg border border-slate-800 bg-slate-900/50">
+                  <div>
+                    <p className="text-white font-medium">{client.nome}</p>
+                    <p className="text-xs text-slate-400">
+                      {(client.cidade || 'Cidade nao definida')}{client.estado ? ` - ${client.estado}` : ''}
+                    </p>
                   </div>
-                );
-              })
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => handleEditClient(client)}>
+                      <Pencil className="w-4 h-4 mr-1" />
+                      Editar
+                    </Button>
+                    <Button size="sm" variant="destructive" onClick={() => handleDeleteClient(client.id)}>
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Excluir
+                    </Button>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </section>
@@ -382,7 +356,7 @@ const Admin = () => {
             </div>
             <div>
               <h2 className="text-xl font-semibold text-white">Usuarios</h2>
-              <p className="text-sm text-slate-400">Controle de acesso por cidade e permissao admin.</p>
+              <p className="text-sm text-slate-400">Controle de acesso por cliente e permissao admin.</p>
             </div>
           </div>
 
@@ -420,30 +394,16 @@ const Admin = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="user-estado">Estado</Label>
+              <Label htmlFor="user-cliente">Cliente</Label>
               <select
-                id="user-estado"
+                id="user-cliente"
                 className="input"
-                value={userForm.estado}
-                onChange={(event) => setUserForm((prev) => ({ ...prev, estado: event.target.value }))}
+                value={userForm.cliente_id}
+                onChange={(event) => setUserForm((prev) => ({ ...prev, cliente_id: event.target.value }))}
               >
-                <option value="">Selecionar</option>
-                {estadoOptions.map((estado) => (
-                  <option key={estado} value={estado}>{estado}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="user-cidade">Cidade</Label>
-              <select
-                id="user-cidade"
-                className="input"
-                value={userForm.cidade}
-                onChange={(event) => setUserForm((prev) => ({ ...prev, cidade: event.target.value }))}
-              >
-                <option value="">Selecionar</option>
-                {cidadeOptions.map((cidade) => (
-                  <option key={cidade} value={cidade}>{cidade}</option>
+                <option value="">Sem cliente</option>
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id}>{client.nome}</option>
                 ))}
               </select>
             </div>
@@ -484,7 +444,9 @@ const Admin = () => {
                     <p className="text-white font-medium">{u.nome || u.email}</p>
                     <p className="text-xs text-slate-400">{u.email}</p>
                     <p className="text-xs text-slate-500">
-                      {(u.cidade || 'Cidade nao definida')}{u.estado ? ` - ${u.estado}` : ''}
+                      {u.cliente_id && clientById.get(u.cliente_id)
+                        ? `Cliente: ${clientById.get(u.cliente_id).nome}`
+                        : 'Sem cliente'}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

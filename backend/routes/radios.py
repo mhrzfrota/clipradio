@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from app import db
 from models.radio import Radio
 from models.user import User
+from models.cliente import Cliente
 from utils.jwt_utils import token_required, decode_token
 from flask import request as flask_request
 
@@ -14,16 +15,25 @@ def get_user_ctx():
     is_admin = payload.get('is_admin', False)
     cidade = None
     estado = None
+    cliente_id = None
     if user_id and not is_admin:
         user = User.query.get(user_id)
         if user:
-            cidade = user.cidade
-            estado = user.estado
+            cliente_id = user.cliente_id
+            if user.cliente_id:
+                cliente = Cliente.query.get(user.cliente_id)
+                if cliente:
+                    cidade = cliente.cidade
+                    estado = cliente.estado
+            if not cidade and not estado:
+                cidade = user.cidade
+                estado = user.estado
     return {
         'user_id': user_id,
         'is_admin': is_admin,
         'cidade': cidade,
         'estado': estado,
+        'cliente_id': cliente_id,
     }
 
 

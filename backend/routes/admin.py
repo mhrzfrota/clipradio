@@ -78,6 +78,12 @@ def create_user():
         email_prefix = email.split('@')[0] if '@' in email else email
         nome = (email_prefix or 'Usuario').strip()[:255]
 
+    cliente_id = data.get('cliente_id')
+    if cliente_id:
+        cliente = Cliente.query.get(cliente_id)
+        if not cliente:
+            return jsonify({'error': 'Invalid cliente_id'}), 400
+
     user = User(
         email=email,
         nome=nome,
@@ -85,6 +91,7 @@ def create_user():
         is_admin=_parse_bool(data.get('is_admin'), False),
         cidade=_sanitize_text(data.get('cidade')),
         estado=_sanitize_state(data.get('estado')),
+        cliente_id=cliente_id or None,
     )
     user.set_password(password)
 
@@ -138,6 +145,14 @@ def update_user(user_id):
 
     if 'estado' in data:
         user.estado = _sanitize_state(data.get('estado'))
+
+    if 'cliente_id' in data:
+        cliente_id = data.get('cliente_id')
+        if cliente_id:
+            cliente = Cliente.query.get(cliente_id)
+            if not cliente:
+                return jsonify({'error': 'Invalid cliente_id'}), 400
+        user.cliente_id = cliente_id or None
 
     if 'password' in data:
         new_password = data.get('password') or ''
@@ -201,17 +216,10 @@ def create_client():
     if not nome:
         return jsonify({'error': 'nome is required'}), 400
 
-    user_id = data.get('user_id')
-    if user_id:
-        user = User.query.get(user_id)
-        if not user:
-            return jsonify({'error': 'Invalid user_id'}), 400
-
     client = Cliente(
         nome=nome,
         cidade=_sanitize_text(data.get('cidade')),
         estado=_sanitize_state(data.get('estado')),
-        user_id=user_id or None,
     )
 
     try:
@@ -248,14 +256,6 @@ def update_client(client_id):
 
     if 'estado' in data:
         client.estado = _sanitize_state(data.get('estado'))
-
-    if 'user_id' in data:
-        user_id = data.get('user_id')
-        if user_id:
-            user = User.query.get(user_id)
-            if not user:
-                return jsonify({'error': 'Invalid user_id'}), 400
-        client.user_id = user_id or None
 
     try:
         db.session.commit()

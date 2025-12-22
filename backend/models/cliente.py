@@ -10,7 +10,6 @@ class Cliente(db.Model):
     nome = db.Column(db.String(255), nullable=False)
     cidade = db.Column(db.String(255))
     estado = db.Column(db.String(2))
-    user_id = db.Column(db.String(36), db.ForeignKey('usuarios.id'), index=True)
     criado_em = db.Column(db.DateTime, default=datetime.utcnow)
     atualizado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -20,7 +19,6 @@ class Cliente(db.Model):
             'nome': self.nome,
             'cidade': self.cidade,
             'estado': self.estado,
-            'user_id': self.user_id,
             'criado_em': self.criado_em.isoformat() if self.criado_em else None,
             'atualizado_em': self.atualizado_em.isoformat() if self.atualizado_em else None,
         }
