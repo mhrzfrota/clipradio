@@ -128,7 +128,7 @@ const Admin = () => {
     const payload = {
       email: userForm.email.trim(),
       nome: userForm.nome.trim() || undefined,
-      cliente_id: userForm.cliente_id ? userForm.cliente_id : null,
+      cliente_id: userForm.is_admin ? null : (userForm.cliente_id ? userForm.cliente_id : null),
       ativo: userForm.ativo,
       is_admin: userForm.is_admin,
     };
@@ -191,7 +191,7 @@ const Admin = () => {
       email: target.email || '',
       nome: target.nome || '',
       password: '',
-      cliente_id: target.cliente_id || '',
+      cliente_id: target.is_admin ? '' : (target.cliente_id || ''),
       is_admin: Boolean(target.is_admin),
       ativo: target.ativo !== false,
     });
@@ -400,17 +400,25 @@ const Admin = () => {
                 className="input"
                 value={userForm.cliente_id}
                 onChange={(event) => setUserForm((prev) => ({ ...prev, cliente_id: event.target.value }))}
+                disabled={userForm.is_admin}
               >
                 <option value="">Sem cliente</option>
                 {clients.map((client) => (
                   <option key={client.id} value={client.id}>{client.nome}</option>
                 ))}
               </select>
+              {userForm.is_admin && (
+                <p className="text-xs text-slate-400">Admins nao podem ser vinculados a clientes.</p>
+              )}
             </div>
             <div className="flex items-center gap-3">
               <Checkbox
                 checked={userForm.is_admin}
-                onCheckedChange={(value) => setUserForm((prev) => ({ ...prev, is_admin: Boolean(value) }))}
+                onCheckedChange={(value) => setUserForm((prev) => ({
+                  ...prev,
+                  is_admin: Boolean(value),
+                  cliente_id: value ? '' : prev.cliente_id,
+                }))}
               />
               <span className="text-sm text-slate-300">Admin</span>
             </div>
@@ -444,9 +452,11 @@ const Admin = () => {
                     <p className="text-white font-medium">{u.nome || u.email}</p>
                     <p className="text-xs text-slate-400">{u.email}</p>
                     <p className="text-xs text-slate-500">
-                      {u.cliente_id && clientById.get(u.cliente_id)
-                        ? `Cliente: ${clientById.get(u.cliente_id).nome}`
-                        : 'Sem cliente'}
+                      {u.is_admin
+                        ? 'Admin com acesso total'
+                        : (u.cliente_id && clientById.get(u.cliente_id)
+                          ? `Cliente: ${clientById.get(u.cliente_id).nome}`
+                          : 'Sem cliente')}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

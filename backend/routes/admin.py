@@ -79,16 +79,20 @@ def create_user():
         nome = (email_prefix or 'Usuario').strip()[:255]
 
     cliente_id = data.get('cliente_id')
-    if cliente_id:
-        cliente = Cliente.query.get(cliente_id)
-        if not cliente:
-            return jsonify({'error': 'Invalid cliente_id'}), 400
+    is_admin_flag = _parse_bool(data.get('is_admin'), False)
+    if is_admin_flag:
+        cliente_id = None
+    else:
+        if cliente_id:
+            cliente = Cliente.query.get(cliente_id)
+            if not cliente:
+                return jsonify({'error': 'Invalid cliente_id'}), 400
 
     user = User(
         email=email,
         nome=nome,
         ativo=_parse_bool(data.get('ativo'), True),
-        is_admin=_parse_bool(data.get('is_admin'), False),
+        is_admin=is_admin_flag,
         cidade=_sanitize_text(data.get('cidade')),
         estado=_sanitize_state(data.get('estado')),
         cliente_id=cliente_id or None,
@@ -137,8 +141,10 @@ def update_user(user_id):
     if 'ativo' in data:
         user.ativo = _parse_bool(data.get('ativo'), user.ativo)
 
+    next_is_admin = user.is_admin
     if 'is_admin' in data:
-        user.is_admin = _parse_bool(data.get('is_admin'), user.is_admin)
+        next_is_admin = _parse_bool(data.get('is_admin'), user.is_admin)
+        user.is_admin = next_is_admin
 
     if 'cidade' in data:
         user.cidade = _sanitize_text(data.get('cidade'))
@@ -146,7 +152,9 @@ def update_user(user_id):
     if 'estado' in data:
         user.estado = _sanitize_state(data.get('estado'))
 
-    if 'cliente_id' in data:
+    if next_is_admin:
+        user.cliente_id = None
+    elif 'cliente_id' in data:
         cliente_id = data.get('cliente_id')
         if cliente_id:
             cliente = Cliente.query.get(cliente_id)
