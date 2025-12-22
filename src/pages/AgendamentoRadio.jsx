@@ -14,7 +14,7 @@ export default function AgendamentoRadio() {
   return (
     <>
       <Helmet>
-        <title>Editar Agendamento</title>
+        <title>Editar agendamento</title>
         <meta name="description" content="Edite um agendamento de rádio existente." />
       </Helmet>
       <motion.div
@@ -29,7 +29,7 @@ export default function AgendamentoRadio() {
         <Card className="card">
           <CardHeader className="text-center">
             <CardTitle className="text-3xl gradient-text flex items-center justify-center gap-3">
-              <Calendar className="w-8 h-8" /> Editar Agendamento
+              <Calendar className="w-8 h-8" /> Editar agendamento
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6 pt-6">

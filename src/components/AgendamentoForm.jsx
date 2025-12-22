@@ -279,7 +279,7 @@ const AgendamentoForm = ({ agendamentoIdParam, onSuccess }) => {
         )}
 
         <Button type="submit" className="w-full btn btn-primary" disabled={isSubmitting}>
-            {isSubmitting ? <><Loader className="w-4 h-4 mr-2 animate-spin" /> Salvando...</> : <><Save className="w-4 h-4 mr-2" /> Salvar Agendamento</>}
+            {isSubmitting ? <><Loader className="w-4 h-4 mr-2 animate-spin" /> Salvando...</> : <><Save className="w-4 h-4 mr-2" /> Salvar agendamento</>}
         </Button>
     </form>
   );
