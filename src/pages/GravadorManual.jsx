@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
@@ -15,10 +15,44 @@ export default function GravadorManual() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [radios, setRadios] = useState([]);
+  const [selectedEstado, setSelectedEstado] = useState('');
+  const [selectedCidade, setSelectedCidade] = useState('');
   const [selectedRadio, setSelectedRadio] = useState('');
   const [duration, setDuration] = useState(60);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingRadios, setIsFetchingRadios] = useState(true);
+  const estados = useMemo(() => {
+    const unique = new Set();
+    radios.forEach((radio) => {
+      if (radio.estado) {
+        unique.add(String(radio.estado).toUpperCase());
+      }
+    });
+    return Array.from(unique).sort();
+  }, [radios]);
+
+  const cidades = useMemo(() => {
+    if (!selectedEstado) return [];
+    const unique = new Set();
+    radios.forEach((radio) => {
+      const estado = String(radio.estado || '').toUpperCase();
+      if (estado === selectedEstado && radio.cidade) {
+        unique.add(String(radio.cidade));
+      }
+    });
+    return Array.from(unique).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [radios, selectedEstado]);
+
+  const radiosFiltradas = useMemo(() => {
+    if (!selectedEstado || !selectedCidade) return [];
+    return radios
+      .filter((radio) => {
+        const estado = String(radio.estado || '').toUpperCase();
+        const cidade = String(radio.cidade || '');
+        return estado === selectedEstado && cidade === selectedCidade;
+      })
+      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  }, [radios, selectedEstado, selectedCidade]);
 
   useEffect(() => {
     const fetchRadios = async () => {
@@ -38,12 +72,21 @@ export default function GravadorManual() {
     }
   }, [user, toast]);
 
+  useEffect(() => {
+    setSelectedCidade('');
+    setSelectedRadio('');
+  }, [selectedEstado]);
+
+  useEffect(() => {
+    setSelectedRadio('');
+  }, [selectedCidade]);
+
   const handleStartRecording = async () => {
-    if (!selectedRadio || !duration || duration < 1 || duration > 240) {
+    if (!selectedEstado || !selectedCidade || !selectedRadio || !duration || duration < 1 || duration > 240) {
       toast({
         variant: "destructive",
         title: "Campos obrigatórios",
-        description: "Selecione uma rádio e defina uma duração válida (1-240 minutos).",
+        description: "Selecione estado, cidade, rádio e defina uma duração válida (1-240 minutos).",
       });
       return;
     }
@@ -63,6 +106,8 @@ export default function GravadorManual() {
         title: "Gravação iniciada!",
         description: "Sua gravação manual começou em segundo plano.",
       });
+      setSelectedEstado('');
+      setSelectedCidade('');
       setSelectedRadio('');
       setDuration(60);
 
@@ -100,7 +145,7 @@ export default function GravadorManual() {
               <div>
                 <CardTitle className="text-2xl font-semibold text-slate-50">Iniciar nova gravação</CardTitle>
                 <CardDescription className="text-slate-400">
-                  Selecione uma rádio e a duração para começar a gravar imediatamente.
+                  Selecione estado, cidade, rádio e a duração para começar a gravar imediatamente.
                 </CardDescription>
               </div>
             </div>
@@ -108,17 +153,55 @@ export default function GravadorManual() {
           <CardContent>
             <div className="space-y-6">
               <div className="space-y-2">
+                <Label htmlFor="estado-select" className="text-slate-300">Estado</Label>
+                <Select
+                  value={selectedEstado}
+                  onValueChange={setSelectedEstado}
+                  disabled={isFetchingRadios || isLoading}
+                >
+                  <SelectTrigger id="estado-select" className="w-full bg-slate-800 border-slate-700 text-slate-50">
+                    <SelectValue placeholder={isFetchingRadios ? "Carregando estados..." : "Selecione um estado"} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-900 border-slate-800 text-slate-50">
+                    {estados.map((estado) => (
+                      <SelectItem key={estado} value={estado}>
+                        {estado}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cidade-select" className="text-slate-300">Cidade</Label>
+                <Select
+                  value={selectedCidade}
+                  onValueChange={setSelectedCidade}
+                  disabled={!selectedEstado || isFetchingRadios || isLoading}
+                >
+                  <SelectTrigger id="cidade-select" className="w-full bg-slate-800 border-slate-700 text-slate-50">
+                    <SelectValue placeholder={!selectedEstado ? "Selecione um estado primeiro" : "Selecione uma cidade"} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-900 border-slate-800 text-slate-50">
+                    {cidades.map((cidade) => (
+                      <SelectItem key={cidade} value={cidade}>
+                        {cidade}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="radio-select" className="text-slate-300">Rádio</Label>
                 <Select
                   value={selectedRadio}
                   onValueChange={setSelectedRadio}
-                  disabled={isFetchingRadios || isLoading}
+                  disabled={!selectedCidade || isFetchingRadios || isLoading}
                 >
                   <SelectTrigger id="radio-select" className="w-full bg-slate-800 border-slate-700 text-slate-50">
-                    <SelectValue placeholder={isFetchingRadios ? "Carregando rádios..." : "Selecione uma rádio"} />
+                    <SelectValue placeholder={!selectedCidade ? "Selecione uma cidade primeiro" : "Selecione uma rádio"} />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-900 border-slate-800 text-slate-50">
-                    {radios.map((radio) => (
+                    {radiosFiltradas.map((radio) => (
                       <SelectItem key={radio.id} value={radio.id}>
                         {radio.nome}
                       </SelectItem>
