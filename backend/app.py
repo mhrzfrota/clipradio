@@ -53,6 +53,7 @@ def create_app():
         from models.tag import Tag
         from models.clip import Clip
         from models.gravacao_tag import gravacao_tags
+        from models.cliente import Cliente
         
         # Garantir que todas as tabelas existam antes de receber requisições
         try:
@@ -63,7 +64,7 @@ def create_app():
             raise
     
     # Registrar blueprints
-    from routes import auth, radios, gravacoes, agendamentos, tags, recording, files
+    from routes import auth, radios, gravacoes, agendamentos, tags, recording, files, admin
     
     app.register_blueprint(auth.bp, url_prefix='/api/auth')
     app.register_blueprint(radios.bp, url_prefix='/api/radios')
@@ -72,6 +73,7 @@ def create_app():
     app.register_blueprint(tags.bp, url_prefix='/api/tags')
     app.register_blueprint(recording.bp, url_prefix='/api/recording')
     app.register_blueprint(files.bp, url_prefix='/api/files')
+    app.register_blueprint(admin.bp, url_prefix='/api/admin')
     
     @app.route('/api/health')
     def health():

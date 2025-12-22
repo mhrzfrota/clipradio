@@ -6,6 +6,7 @@ from models.agendamento import Agendamento
 from models.tag import Tag
 from models.clip import Clip
 from models.gravacao_tag import gravacao_tags
+from models.cliente import Cliente
 
-__all__ = ['User', 'Radio', 'Gravacao', 'Agendamento', 'Tag', 'Clip', 'gravacao_tags']
+__all__ = ['User', 'Radio', 'Gravacao', 'Agendamento', 'Tag', 'Clip', 'Cliente', 'gravacao_tags']
 

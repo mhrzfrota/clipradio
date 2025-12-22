@@ -151,6 +151,55 @@ class ApiClient {
     return this.request('/gravacoes/admin/quick-stats');
   }
 
+  // ============ ADMIN ============
+  async getAdminUsers() {
+    return this.request('/admin/users');
+  }
+
+  async createAdminUser(data) {
+    return this.request('/admin/users', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateAdminUser(id, data) {
+    return this.request(`/admin/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteAdminUser(id) {
+    return this.request(`/admin/users/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getAdminClients() {
+    return this.request('/admin/clients');
+  }
+
+  async createAdminClient(data) {
+    return this.request('/admin/clients', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateAdminClient(id, data) {
+    return this.request(`/admin/clients/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteAdminClient(id) {
+    return this.request(`/admin/clients/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // ============ AGENDAMENTOS ============
   async getAgendamentos() {
     return this.request('/agendamentos');

@@ -66,7 +66,7 @@ const GravacoesStats = ({ stats }) => (
 
 );
 
-const GravacoesFilter = ({ filters, setFilters, radios }) => {
+const GravacoesFilter = ({ filters, setFilters, radios, estadoOptions, cidadeOptions }) => {
 
   const handleFilterChange = (e) => {
 
@@ -92,7 +92,12 @@ const GravacoesFilter = ({ filters, setFilters, radios }) => {
 
           <div className="relative">
 
-            <input id="filterEstado" name="estado" type="text" placeholder="Digite o estado (UF)..." value={filters.estado} onChange={handleFilterChange} className="input pr-10" />
+            <select id="filterEstado" name="estado" className="input appearance-none pr-10" value={filters.estado} onChange={handleFilterChange}>
+              <option value="">Todos os estados</option>
+              {estadoOptions.map((estado) => (
+                <option key={estado} value={estado}>{estado}</option>
+              ))}
+            </select>
 
             <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
 
@@ -106,7 +111,12 @@ const GravacoesFilter = ({ filters, setFilters, radios }) => {
 
           <div className="relative">
 
-            <input id="filterCidade" name="cidade" type="text" placeholder="Digite a cidade..." value={filters.cidade} onChange={handleFilterChange} className="input pr-10" />
+            <select id="filterCidade" name="cidade" className="input appearance-none pr-10" value={filters.cidade} onChange={handleFilterChange}>
+              <option value="">Todas as cidades</option>
+              {cidadeOptions.map((cidade) => (
+                <option key={cidade} value={cidade}>{cidade}</option>
+              ))}
+            </select>
 
             <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
 
@@ -387,6 +397,31 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
 
   const [filters, setFilters] = useState({ radioId: initialRadioId, data: '', cidade: '', estado: '' });
 
+  const estadoOptions = useMemo(() => {
+    const estadoSet = new Set();
+    radios.forEach((radio) => {
+      if (radio.estado) {
+        estadoSet.add(radio.estado.toUpperCase());
+      }
+    });
+    return Array.from(estadoSet).sort();
+  }, [radios]);
+
+  const cidadeOptions = useMemo(() => {
+    const cidadeSet = new Set();
+    radios.forEach((radio) => {
+      if (!radio.cidade) return;
+      if (filters.estado) {
+        const radioEstado = (radio.estado || '').toUpperCase();
+        if (radioEstado !== filters.estado.toUpperCase()) {
+          return;
+        }
+      }
+      cidadeSet.add(radio.cidade);
+    });
+    return Array.from(cidadeSet).sort((a, b) => a.localeCompare(b));
+  }, [radios, filters.estado]);
+
   const [currentPlayingId, setCurrentPlayingId] = useState(null);
 
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -454,6 +489,12 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
     fetchRadios();
 
   }, [fetchRadios]);
+
+  useEffect(() => {
+    if (!filters.cidade) return;
+    if (cidadeOptions.includes(filters.cidade)) return;
+    setFilters((prev) => ({ ...prev, cidade: '' }));
+  }, [cidadeOptions, filters.cidade, setFilters]);
 
 
 
@@ -774,7 +815,13 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
 
           <GravacoesStats stats={stats} />
 
-          <GravacoesFilter filters={filters} setFilters={setFilters} radios={radios} />
+          <GravacoesFilter
+            filters={filters}
+            setFilters={setFilters}
+            radios={radios}
+            estadoOptions={estadoOptions}
+            cidadeOptions={cidadeOptions}
+          />
 
 
 

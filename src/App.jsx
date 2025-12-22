@@ -18,6 +18,7 @@ import Profile from '@/pages/Profile';
 import Tags from '@/pages/Tags';
 import SystemStatus from '@/pages/SystemStatus';
 import AdminRelatorios from '@/pages/AdminRelatorios';
+import Admin from '@/pages/Admin';
 
 function App() {
   const [globalAudioTrack, setGlobalAudioTrack] = useState(null);
@@ -57,6 +58,7 @@ function App() {
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/tags" element={<ProtectedRoute><Tags /></ProtectedRoute>} />
             <Route path="/admin-relatorios" element={<ProtectedRoute><AdminRelatorios /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
             <Route path="/status" element={<ProtectedRoute><SystemStatus /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/dashboard" />} />
           </Routes>

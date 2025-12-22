@@ -12,6 +12,8 @@ class User(db.Model):
     nome = db.Column(db.String(255))
     ativo = db.Column(db.Boolean, default=True)
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
+    cidade = db.Column(db.String(255))
+    estado = db.Column(db.String(2))
     criado_em = db.Column(db.DateTime, default=datetime.utcnow)
     atualizado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -20,6 +22,7 @@ class User(db.Model):
     gravacoes = db.relationship('Gravacao', backref='usuario', lazy=True, cascade='all, delete-orphan')
     agendamentos = db.relationship('Agendamento', backref='usuario', lazy=True, cascade='all, delete-orphan')
     tags = db.relationship('Tag', backref='usuario', lazy=True, cascade='all, delete-orphan')
+    clientes = db.relationship('Cliente', backref='usuario', lazy=True, cascade='all, delete-orphan')
     
     def set_password(self, senha):
         self.senha_hash = bcrypt.hashpw(senha.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -34,5 +37,7 @@ class User(db.Model):
             'nome': self.nome,
             'ativo': self.ativo,
             'is_admin': self.is_admin,
+            'cidade': self.cidade,
+            'estado': self.estado,
             'criado_em': self.criado_em.isoformat() if self.criado_em else None
         }
