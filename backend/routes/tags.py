@@ -8,23 +8,34 @@ from flask import request as flask_request
 
 bp = Blueprint('tags', __name__)
 
-def get_user_id():
+def get_user_ctx():
     token = flask_request.headers.get('Authorization', '').replace('Bearer ', '')
-    payload = decode_token(token)
-    return payload['user_id'] if payload else None
+    payload = decode_token(token) or {}
+    return {
+        'user_id': payload.get('user_id'),
+        'is_admin': payload.get('is_admin', False),
+    }
 
 @bp.route('', methods=['GET'])
 @token_required
 def get_tags():
-    user_id = get_user_id()
-    tags = Tag.query.filter_by(user_id=user_id).order_by(Tag.criado_em.desc()).all()
+    ctx = get_user_ctx()
+    user_id = ctx.get('user_id')
+    if ctx.get('is_admin'):
+        tags = Tag.query.order_by(Tag.criado_em.desc()).all()
+    else:
+        tags = Tag.query.filter_by(user_id=user_id).order_by(Tag.criado_em.desc()).all()
     return jsonify([tag.to_dict() for tag in tags]), 200
 
 @bp.route('/<tag_id>', methods=['GET'])
 @token_required
 def get_tag(tag_id):
-    user_id = get_user_id()
-    tag = Tag.query.filter_by(id=tag_id, user_id=user_id).first()
+    ctx = get_user_ctx()
+    user_id = ctx.get('user_id')
+    if ctx.get('is_admin'):
+        tag = Tag.query.filter_by(id=tag_id).first()
+    else:
+        tag = Tag.query.filter_by(id=tag_id, user_id=user_id).first()
     if not tag:
         return jsonify({'error': 'Tag not found'}), 404
     return jsonify(tag.to_dict()), 200
@@ -32,7 +43,7 @@ def get_tag(tag_id):
 @bp.route('', methods=['POST'])
 @token_required
 def create_tag():
-    user_id = get_user_id()
+    user_id = get_user_ctx().get('user_id')
     data = request.get_json()
     
     if not data.get('nome'):
@@ -52,8 +63,12 @@ def create_tag():
 @bp.route('/<tag_id>', methods=['PUT'])
 @token_required
 def update_tag(tag_id):
-    user_id = get_user_id()
-    tag = Tag.query.filter_by(id=tag_id, user_id=user_id).first()
+    ctx = get_user_ctx()
+    user_id = ctx.get('user_id')
+    if ctx.get('is_admin'):
+        tag = Tag.query.filter_by(id=tag_id).first()
+    else:
+        tag = Tag.query.filter_by(id=tag_id, user_id=user_id).first()
     if not tag:
         return jsonify({'error': 'Tag not found'}), 404
     
@@ -69,8 +84,12 @@ def update_tag(tag_id):
 @bp.route('/<tag_id>', methods=['DELETE'])
 @token_required
 def delete_tag(tag_id):
-    user_id = get_user_id()
-    tag = Tag.query.filter_by(id=tag_id, user_id=user_id).first()
+    ctx = get_user_ctx()
+    user_id = ctx.get('user_id')
+    if ctx.get('is_admin'):
+        tag = Tag.query.filter_by(id=tag_id).first()
+    else:
+        tag = Tag.query.filter_by(id=tag_id, user_id=user_id).first()
     if not tag:
         return jsonify({'error': 'Tag not found'}), 404
     
@@ -82,15 +101,20 @@ def delete_tag(tag_id):
 @bp.route('/gravacao/<gravacao_id>', methods=['POST'])
 @token_required
 def add_tag_to_gravacao(gravacao_id):
-    user_id = get_user_id()
+    ctx = get_user_ctx()
+    user_id = ctx.get('user_id')
     data = request.get_json()
     tag_id = data.get('tag_id')
     
     if not tag_id:
         return jsonify({'error': 'tag_id is required'}), 400
     
-    gravacao = Gravacao.query.filter_by(id=gravacao_id, user_id=user_id).first()
-    tag = Tag.query.filter_by(id=tag_id, user_id=user_id).first()
+    if ctx.get('is_admin'):
+        gravacao = Gravacao.query.filter_by(id=gravacao_id).first()
+        tag = Tag.query.filter_by(id=tag_id).first()
+    else:
+        gravacao = Gravacao.query.filter_by(id=gravacao_id, user_id=user_id).first()
+        tag = Tag.query.filter_by(id=tag_id, user_id=user_id).first()
     
     if not gravacao or not tag:
         return jsonify({'error': 'Gravacao or Tag not found'}), 404
@@ -105,10 +129,15 @@ def add_tag_to_gravacao(gravacao_id):
 @bp.route('/gravacao/<gravacao_id>/<tag_id>', methods=['DELETE'])
 @token_required
 def remove_tag_from_gravacao(gravacao_id, tag_id):
-    user_id = get_user_id()
+    ctx = get_user_ctx()
+    user_id = ctx.get('user_id')
     
-    gravacao = Gravacao.query.filter_by(id=gravacao_id, user_id=user_id).first()
-    tag = Tag.query.filter_by(id=tag_id, user_id=user_id).first()
+    if ctx.get('is_admin'):
+        gravacao = Gravacao.query.filter_by(id=gravacao_id).first()
+        tag = Tag.query.filter_by(id=tag_id).first()
+    else:
+        gravacao = Gravacao.query.filter_by(id=gravacao_id, user_id=user_id).first()
+        tag = Tag.query.filter_by(id=tag_id, user_id=user_id).first()
     
     if not gravacao or not tag:
         return jsonify({'error': 'Gravacao or Tag not found'}), 404

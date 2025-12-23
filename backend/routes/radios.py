@@ -1,8 +1,6 @@
 from flask import Blueprint, request, jsonify
 from app import db
 from models.radio import Radio
-from models.user import User
-from models.cliente import Cliente
 from utils.jwt_utils import token_required, decode_token
 from flask import request as flask_request
 
@@ -11,44 +9,14 @@ bp = Blueprint('radios', __name__)
 def get_user_ctx():
     token = flask_request.headers.get('Authorization', '').replace('Bearer ', '')
     payload = decode_token(token) or {}
-    user_id = payload.get('user_id')
-    is_admin = payload.get('is_admin', False)
-    cidade = None
-    estado = None
-    cliente_id = None
-    if user_id and not is_admin:
-        user = User.query.get(user_id)
-        if user:
-            cliente_id = user.cliente_id
-            if user.cliente_id:
-                cliente = Cliente.query.get(user.cliente_id)
-                if cliente:
-                    cidade = cliente.cidade
-                    estado = cliente.estado
-            if not cidade and not estado:
-                cidade = user.cidade
-                estado = user.estado
     return {
-        'user_id': user_id,
-        'is_admin': is_admin,
-        'cidade': cidade,
-        'estado': estado,
-        'cliente_id': cliente_id,
+        'user_id': payload.get('user_id'),
+        'is_admin': payload.get('is_admin', False),
     }
 
 
 def _radio_access_allowed(radio, ctx):
-    if ctx.get('is_admin'):
-        return True
-    cidade = ctx.get('cidade')
-    estado = ctx.get('estado')
-    if cidade or estado:
-        if cidade and (not radio.cidade or radio.cidade.lower() != cidade.lower()):
-            return False
-        if estado and (not radio.estado or radio.estado.upper() != estado.upper()):
-            return False
-        return True
-    return radio.user_id == ctx.get('user_id')
+    return bool(ctx.get('is_admin') or radio.user_id == ctx.get('user_id'))
 
 ALLOWED_BITRATES = {96, 128}
 ALLOWED_FORMATS = {'mp3', 'opus'}
@@ -72,33 +40,15 @@ def _sanitize_audio_mode(value):
 @bp.route('', methods=['GET'])
 @token_required
 def get_radios():
-    ctx = get_user_ctx()
-    user_id = ctx.get('user_id')
-    is_admin = ctx.get('is_admin', False)
-    cidade = ctx.get('cidade')
-    estado = ctx.get('estado')
-
     query = Radio.query
-    if not is_admin:
-        if cidade or estado:
-            if cidade:
-                query = query.filter(db.func.lower(Radio.cidade) == cidade.lower())
-            if estado:
-                query = query.filter(db.func.upper(Radio.estado) == estado.upper())
-        else:
-            query = query.filter_by(user_id=user_id)
     radios = query.order_by(Radio.favorita.desc(), Radio.criado_em.desc()).all()
     return jsonify([radio.to_dict() for radio in radios]), 200
 
 @bp.route('/<radio_id>', methods=['GET'])
 @token_required
 def get_radio(radio_id):
-    ctx = get_user_ctx()
-    is_admin = ctx.get('is_admin', False)
     radio = Radio.query.filter_by(id=radio_id).first()
     if not radio:
-        return jsonify({'error': 'Radio not found'}), 404
-    if not is_admin and not _radio_access_allowed(radio, ctx):
         return jsonify({'error': 'Radio not found'}), 404
     return jsonify(radio.to_dict()), 200
 
@@ -107,24 +57,10 @@ def get_radio(radio_id):
 def create_radio():
     ctx = get_user_ctx()
     user_id = ctx.get('user_id')
-    cidade_permitida = ctx.get('cidade')
-    estado_permitido = ctx.get('estado')
     data = request.get_json()
     
     if not data.get('nome') or not data.get('stream_url'):
         return jsonify({'error': 'Nome and stream_url are required'}), 400
-
-    if not ctx.get('is_admin') and (cidade_permitida or estado_permitido):
-        if cidade_permitida:
-            cidade_req = (data.get('cidade') or '').strip()
-            if cidade_req and cidade_req.lower() != cidade_permitida.lower():
-                return jsonify({'error': 'Cidade not allowed for this user'}), 403
-            data['cidade'] = cidade_req or cidade_permitida
-        if estado_permitido:
-            estado_req = (data.get('estado') or '').strip().upper()
-            if estado_req and estado_req != estado_permitido.upper():
-                return jsonify({'error': 'Estado not allowed for this user'}), 403
-            data['estado'] = estado_req or estado_permitido.upper()
     
     bitrate = _sanitize_bitrate(data.get('bitrate_kbps', 128))
     output_format = _sanitize_format(data.get('output_format', 'mp3'))
@@ -163,17 +99,6 @@ def update_radio(radio_id):
         return jsonify({'error': 'Radio not found'}), 404
     
     data = request.get_json()
-    if not is_admin and (ctx.get('cidade') or ctx.get('estado')):
-        if 'cidade' in data and ctx.get('cidade'):
-            cidade_req = (data.get('cidade') or '').strip()
-            if cidade_req and cidade_req.lower() != ctx.get('cidade').lower():
-                return jsonify({'error': 'Cidade not allowed for this user'}), 403
-            data['cidade'] = ctx.get('cidade')
-        if 'estado' in data and ctx.get('estado'):
-            estado_req = (data.get('estado') or '').strip().upper()
-            if estado_req and estado_req != ctx.get('estado').upper():
-                return jsonify({'error': 'Estado not allowed for this user'}), 403
-            data['estado'] = ctx.get('estado')
     if 'nome' in data:
         radio.nome = data['nome']
     if 'stream_url' in data:

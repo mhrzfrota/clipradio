@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Radio, Globe, Plus, Edit, Trash2, Star, StarOff, Loader, MapPin, Play, Pause, CheckCircle, AlertCircle, LayoutGrid, List, CircleDot, Clock, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/contexts/SupabaseAuthContext'
 import apiClient from '@/lib/apiClient'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -44,6 +45,7 @@ const CadastroRadios = () => {
   const audioRef = useRef(null)
   const validationAudioRef = useRef(null)
   const { toast } = useToast()
+  const { user } = useAuth()
   const ITEMS_PER_PAGE = 10
   const totalPages = useMemo(() => Math.max(1, Math.ceil(radios.length / ITEMS_PER_PAGE)), [radios.length])
   const paginatedRadios = useMemo(() => {
@@ -56,6 +58,8 @@ const CadastroRadios = () => {
   useEffect(() => {
     setRadiosPage((prev) => Math.min(prev, totalPages))
   }, [totalPages])
+
+  const canManageRadio = (radio) => user?.is_admin || radio?.user_id === user?.id
 
   const resetForm = useCallback(() => {
     setFormData({ nome: '', stream_url: '', cidade: '', estado: '', favorita: false, bitrate_kbps: 128, output_format: 'mp3', audio_mode: 'stereo' })
@@ -561,6 +565,7 @@ const CadastroRadios = () => {
                               variant="ghost"
                               size="icon"
                               onClick={() => toggleFavorite(radio)}
+                              disabled={!canManageRadio(radio)}
                               className="h-8 w-8 flex-shrink-0 hover:bg-yellow-500/10 transition-colors"
                             >
                               {radio.favorita ? (
@@ -654,6 +659,7 @@ const CadastroRadios = () => {
                               size="sm"
                               variant="ghost"
                               onClick={() => handleEdit(radio)}
+                              disabled={!canManageRadio(radio)}
                               className="flex-1 h-8 text-xs text-slate-400 hover:text-white hover:bg-slate-800/60"
                             >
                               <Edit className="w-3 h-3 mr-1" />
@@ -663,6 +669,7 @@ const CadastroRadios = () => {
                               size="sm"
                               variant="ghost"
                               onClick={() => handleDelete(radio.id)}
+                              disabled={!canManageRadio(radio)}
                               className="flex-1 h-8 text-xs text-slate-400 hover:text-red-400 hover:bg-red-500/10"
                             >
                               <Trash2 className="w-3 h-3 mr-1" />
@@ -685,6 +692,7 @@ const CadastroRadios = () => {
                           variant="ghost"
                           size="icon"
                           onClick={() => toggleFavorite(radio)}
+                          disabled={!canManageRadio(radio)}
                           className="text-yellow-400 flex-shrink-0"
                         >
                           {radio.favorita ? <Star className="w-5 h-5" /> : <StarOff className="w-5 h-5" />}
@@ -735,7 +743,7 @@ const CadastroRadios = () => {
                               </Button>
                             )
                           })()}
-                          <Button size="sm" variant="outline" onClick={() => handleEdit(radio)}>
+                          <Button size="sm" variant="outline" onClick={() => handleEdit(radio)} disabled={!canManageRadio(radio)}>
                             <Edit className="w-4 h-4" />
                           </Button>
                           <Button
@@ -743,6 +751,7 @@ const CadastroRadios = () => {
                             variant="ghost"
                             className="text-destructive"
                             onClick={() => handleDelete(radio.id)}
+                            disabled={!canManageRadio(radio)}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
