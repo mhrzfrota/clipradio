@@ -8,6 +8,7 @@ import apiClient from '@/lib/apiClient'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 
 const CadastroRadios = () => {
   const [radios, setRadios] = useState([])
@@ -32,6 +33,9 @@ const CadastroRadios = () => {
   const [radiosPage, setRadiosPage] = useState(1)
   const [scheduledRadioIds, setScheduledRadioIds] = useState(new Set())
   const [recordPanelRadioId, setRecordPanelRadioId] = useState(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [radioToDelete, setRadioToDelete] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [startingRecording, setStartingRecording] = useState(false)
   const [recordStartTime, setRecordStartTime] = useState('')
   const [recordEndTime, setRecordEndTime] = useState('')
@@ -198,6 +202,26 @@ const CadastroRadios = () => {
     } catch (error) {
       toast({ title: 'Erro ao remover rádio', description: error.message, variant: 'destructive' })
     }
+  }
+
+  const openDeleteDialog = (radio) => {
+    setRadioToDelete(radio)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteDialogChange = (open) => {
+    setDeleteDialogOpen(open)
+    if (!open) {
+      setRadioToDelete(null)
+    }
+  }
+
+  const confirmDelete = async () => {
+    if (!radioToDelete) return
+    setIsDeleting(true)
+    await handleDelete(radioToDelete.id)
+    setIsDeleting(false)
+    handleDeleteDialogChange(false)
   }
 
   const toggleFavorite = async (radio) => {
@@ -687,7 +711,7 @@ const CadastroRadios = () => {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => handleDelete(radio.id)}
+                              onClick={() => openDeleteDialog(radio)}
                               disabled={!canManageRadio(radio)}
                               className="flex-1 h-8 text-xs text-slate-400 hover:text-red-400 hover:bg-red-500/10"
                             >
@@ -769,7 +793,7 @@ const CadastroRadios = () => {
                             size="sm"
                             variant="ghost"
                             className="text-destructive"
-                            onClick={() => handleDelete(radio.id)}
+                            onClick={() => openDeleteDialog(radio)}
                             disabled={!canManageRadio(radio)}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -827,6 +851,29 @@ const CadastroRadios = () => {
             </Card>
           </motion.div>
         </div>
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={handleDeleteDialogChange}>
+          <AlertDialogContent className="bg-slate-900 border-slate-700 text-white">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir radio?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta acao nao pode ser desfeita. {radioToDelete?.nome ? `A radio "${radioToDelete.nome}" sera removida.` : 'Esta radio sera removida.'}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(event) => {
+                  event.preventDefault()
+                  confirmDelete()
+                }}
+                disabled={isDeleting || !radioToDelete}
+              >
+                {isDeleting ? 'Excluindo...' : 'Sim, excluir'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Modal de Gravação */}
         <Dialog open={recordPanelRadioId !== null} onOpenChange={(open) => !open && closeRecordModal()}>
