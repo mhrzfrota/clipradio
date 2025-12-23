@@ -28,6 +28,7 @@ const CadastroRadios = () => {
   const [isBuffering, setIsBuffering] = useState(false)
   const [streamStatus, setStreamStatus] = useState({ state: 'idle', message: '' })
   const [viewMode, setViewMode] = useState('card')
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
   const [radiosPage, setRadiosPage] = useState(1)
   const [scheduledRadioIds, setScheduledRadioIds] = useState(new Set())
   const [recordPanelRadioId, setRecordPanelRadioId] = useState(null)
@@ -47,11 +48,15 @@ const CadastroRadios = () => {
   const { toast } = useToast()
   const { user } = useAuth()
   const ITEMS_PER_PAGE = 10
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(radios.length / ITEMS_PER_PAGE)), [radios.length])
+  const filteredRadios = useMemo(
+    () => (showFavoritesOnly ? radios.filter((radio) => radio.favorita) : radios),
+    [radios, showFavoritesOnly],
+  )
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredRadios.length / ITEMS_PER_PAGE)), [filteredRadios.length])
   const paginatedRadios = useMemo(() => {
     const startIndex = (radiosPage - 1) * ITEMS_PER_PAGE
-    return radios.slice(startIndex, startIndex + ITEMS_PER_PAGE)
-  }, [radios, radiosPage])
+    return filteredRadios.slice(startIndex, startIndex + ITEMS_PER_PAGE)
+  }, [filteredRadios, radiosPage])
   const canPrevPage = radiosPage > 1
   const canNextPage = radiosPage < totalPages
 
@@ -508,7 +513,19 @@ const CadastroRadios = () => {
                   Rádios cadastradas
                 </CardTitle>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm text-slate-400">Total: {radios.length}</span>
+                  <Button
+                    size="sm"
+                    variant={showFavoritesOnly ? 'default' : 'ghost'}
+                    onClick={() => setShowFavoritesOnly((prev) => !prev)}
+                    aria-pressed={showFavoritesOnly}
+                    className={`h-8 px-3 ${showFavoritesOnly ? 'bg-yellow-500 hover:bg-yellow-600 text-slate-900' : 'text-slate-300'}`}
+                  >
+                    {showFavoritesOnly ? <Star className="w-4 h-4 mr-2" /> : <StarOff className="w-4 h-4 mr-2" />}
+                    Favoritas
+                  </Button>
+                  <span className="text-sm text-slate-400">
+                    Total: {showFavoritesOnly ? `${filteredRadios.length} de ${radios.length}` : radios.length}
+                  </span>
                   <div className="flex gap-1 p-1 bg-slate-900/60 rounded-md border border-slate-700">
                     <Button
                       size="sm"
@@ -534,8 +551,10 @@ const CadastroRadios = () => {
                     <div className="flex justify-center py-12">
                       <Loader className="w-10 h-10 animate-spin text-cyan-400" />
                     </div>
-                  ) : radios.length === 0 ? (
-                    <div className="text-center py-12 text-slate-400">Nenhuma rádio cadastrada ainda.</div>
+                  ) : filteredRadios.length === 0 ? (
+                    <div className="text-center py-12 text-slate-400">
+                      {showFavoritesOnly ? 'Nenhuma radio favorita encontrada.' : 'Nenhuma radio cadastrada ainda.'}
+                    </div>
                   ) : viewMode === 'card' ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {paginatedRadios.map((radio, index) => {
