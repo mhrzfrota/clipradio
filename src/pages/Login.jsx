@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { LogIn, UserPlus, Loader } from 'lucide-react';
+import { Eye, EyeOff, LogIn, Loader } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
   const { signIn, user } = useAuth();
   const navigate = useNavigate();
@@ -100,15 +101,26 @@ const Login = () => {
             <label className="block text-sm font-medium text-slate-300 mb-2" htmlFor="password">
               Senha
             </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="input"
-              placeholder="********"
-              required
-            />
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input pr-10"
+                placeholder="********"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
           <Button type="submit" className="btn btn-primary w-full" disabled={isSubmitting}>
             {isSubmitting ? (
@@ -120,19 +132,6 @@ const Login = () => {
             )}
           </Button>
         </form>
-        
-        <div className="mt-6 text-center">
-          <p className="text-slate-400">
-            Não tem uma conta?
-            <Link to="/cadastro-usuario">
-              <button
-                className="font-semibold text-cyan-400 hover:text-cyan-300 ml-2 focus:outline-none"
-              >
-                Cadastre-se
-              </button>
-            </Link>
-          </p>
-        </div>
       </motion.div>
     </div>
   );

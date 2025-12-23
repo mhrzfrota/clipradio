@@ -11,7 +11,6 @@ import AgendamentoRadio from '@/pages/AgendamentoRadio';
 import Gravacoes from '@/pages/Gravacoes';
 import GravadorManual from '@/pages/GravadorManual';
 import Login from '@/pages/Login';
-import Cadastro from '@/pages/Cadastro';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import GlobalAudioPlayer from '@/components/GlobalAudioPlayer';
 import Profile from '@/pages/Profile';
@@ -45,7 +44,6 @@ function App() {
         >
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/cadastro-usuario" element={<Cadastro />} />
             <Route path="/" element={<Navigate to="/dashboard" />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/cadastro-radios" element={<ProtectedRoute><CadastroRadios /></ProtectedRoute>} />

@@ -156,12 +156,12 @@ const TagsManager = ({ onTagsUpdated }) => {
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => handleOpenDialog()}>
-              <Plus className="w-4 h-4 mr-2" /> Nova Tag
+              <Plus className="w-4 h-4 mr-2" /> Nova tag
             </Button>
           </DialogTrigger>
           <DialogContent className="bg-slate-900 border-slate-700 text-white">
             <DialogHeader>
-              <DialogTitle className="gradient-text">{editingTag ? 'Editar Tag' : 'Criar Nova Tag'}</DialogTitle>
+              <DialogTitle className="gradient-text">{editingTag ? 'Editar Tag' : 'Criar nova tag'}</DialogTitle>
             </DialogHeader>
             <TagForm
               tag={editingTag}
@@ -186,7 +186,7 @@ const TagsManager = ({ onTagsUpdated }) => {
             <div className="text-center py-12 text-slate-500">
               <TagIcon className="w-12 h-12 mx-auto mb-4" />
               <p className="font-semibold">Nenhuma tag encontrada.</p>
-              <p className="text-sm">Clique em "Nova Tag" para começar a organizar.</p>
+              <p className="text-sm">Clique em "Nova tag" para começar a organizar.</p>
             </div>
           )}
         </div>
@@ -195,4 +195,5 @@ const TagsManager = ({ onTagsUpdated }) => {
   );
 };
 
-export default TagsManager;
+export default TagsManager;
+
