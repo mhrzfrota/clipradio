@@ -50,7 +50,7 @@ const TagForm = ({ tag, onSave, onCancel, loading }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <Label htmlFor="tag-name" className="text-slate-300">Nome da Tag</Label>
+        <Label htmlFor="tag-name" className="text-slate-300">Nome da tag</Label>
         <Input id="tag-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Notícia Urgente" className="mt-1" />
       </div>
       <div>
