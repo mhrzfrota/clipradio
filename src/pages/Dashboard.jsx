@@ -46,7 +46,7 @@ const Dashboard = () => {
       const [radiosData, agendamentosData, gravacoesData] = await Promise.all([
         apiClient.getRadios(),
         apiClient.getAgendamentos(),
-        apiClient.getGravacoes(),
+        apiClient.getGravacoes({ page: 1, perPage: 1 }),
       ]);
 
       const ativos = (agendamentosData || []).filter((ag) => ag.status === 'agendado');
@@ -60,7 +60,7 @@ const Dashboard = () => {
       setStats({
         radios: radiosData?.length || 0,
         agendamentos: ativos.length,
-        gravacoes: gravacoesData?.length || 0,
+        gravacoes: gravacoesData?.meta?.total ?? gravacoesData?.items?.length ?? 0,
       });
     } catch (error) {
       toast({ title: 'Erro ao buscar estatísticas', description: error.message, variant: 'destructive' });

@@ -8,7 +8,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Helmet } from 'react-helmet';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { Play, Pause, Download, Trash2, Clock, FileArchive, Mic, Filter, ListFilter, CalendarDays, MapPin, XCircle, Loader, Square, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -17,9 +17,30 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const API_ORIGIN = API_URL.replace(/\/api\/?$/, '');
 
-const resolveFileUrl = (url) => {
+const resolveFileUrl = (url, filename) => {
+  if (url) {
+    if (/^(blob:|data:)/i.test(url)) return url;
+    if (/^https?:/i.test(url)) {
+      try {
+        const parsed = new URL(url);
+        const host = parsed.hostname;
+        const apiHost = new URL(API_ORIGIN).hostname;
+        const isLocalHost = host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0';
+        if (!isLocalHost && host !== apiHost) {
+          return url;
+        }
+        if (!filename) {
+          return `${API_ORIGIN}${parsed.pathname}${parsed.search}`;
+        }
+      } catch (error) {
+        return url;
+      }
+    }
+  }
+  if (filename) {
+    return `${API_ORIGIN}/api/files/audio/${encodeURIComponent(filename)}`;
+  }
   if (!url) return '';
-  if (/^(https?:|blob:|data:)/i.test(url)) return url;
   if (url.startsWith('/')) return `${API_ORIGIN}${url}`;
   return `${API_ORIGIN}/${url}`;
 };
@@ -248,7 +269,7 @@ const GravacaoItem = ({ gravacao, index, isPlaying, onPlay, onStop, setGlobalAud
 
     } else {
 
-      const audioUrl = resolveFileUrl(gravacao.arquivo_url);
+      const audioUrl = resolveFileUrl(gravacao.arquivo_url, gravacao.arquivo_nome);
       onPlay();
 
       setGlobalAudioTrack({
@@ -279,7 +300,7 @@ const GravacaoItem = ({ gravacao, index, isPlaying, onPlay, onStop, setGlobalAud
 
     try {
 
-      const audioUrl = resolveFileUrl(gravacao.arquivo_url);
+      const audioUrl = resolveFileUrl(gravacao.arquivo_url, gravacao.arquivo_nome);
       if (!audioUrl) {
         toast({ title: "Download indisponÇðvel", description: "O arquivo desta gravação não foi encontrado.", variant: 'destructive' });
         return;
@@ -439,6 +460,8 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
   const [radios, setRadios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ totalGravacoes: 0, totalDuration: 0, totalSize: 0, uniqueRadios: 0 });
+  const ITEMS_PER_PAGE = 10;
+  const [listMeta, setListMeta] = useState({ page: 1, per_page: ITEMS_PER_PAGE, total: 0, total_pages: 0 });
   const [ongoingLive, setOngoingLive] = useState([]);
   const [loadingOngoing, setLoadingOngoing] = useState(false);
   const location = useLocation();
@@ -485,7 +508,6 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
   const [activeTab, setActiveTab] = useState('all');
   const [stoppingId, setStoppingId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 10;
 
   const { toast } = useToast();
 
@@ -514,28 +536,45 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
     setLoading(true);
 
     try {
+      const statusFilter = activeTab === 'all' || activeTab === 'agendados' || activeTab === 'manuais'
+        ? 'concluido'
+        : undefined;
+      const tipoFilter = activeTab === 'agendados'
+        ? 'agendado'
+        : activeTab === 'manuais'
+          ? 'manual'
+          : undefined;
       const [gravResp, agData] = await Promise.all([
         apiClient.getGravacoes({
           radioId: filters.radioId !== 'all' ? filters.radioId : undefined,
           data: filters.data,
           cidade: filters.cidade,
           estado: filters.estado,
+          status: statusFilter,
+          tipo: tipoFilter,
+          page: currentPage,
+          perPage: ITEMS_PER_PAGE,
           includeStats: true,
         }),
         apiClient.getAgendamentos().catch(() => []),
       ]);
 
-      const gravList = Array.isArray(gravResp) ? gravResp : gravResp?.items || [];
+      const gravList = gravResp?.items || [];
       const statsData = gravResp?.stats;
+      const metaData = gravResp?.meta;
 
       setGravacoes(gravList || []);
       setAgendamentos(agData || []);
       setStats(statsData || { totalGravacoes: 0, totalDuration: 0, totalSize: 0, uniqueRadios: 0 });
+      setListMeta(metaData || { page: currentPage, per_page: ITEMS_PER_PAGE, total: gravList.length, total_pages: gravList.length ? 1 : 0 });
+      if (metaData?.page && metaData.page !== currentPage) {
+        setCurrentPage(metaData.page);
+      }
     } catch (error) {
       toast({ title: 'Erro ao buscar gravações', description: error.message, variant: 'destructive' });
     }
     setLoading(false);
-  }, [filters, toast]);
+  }, [activeTab, currentPage, filters, toast]);
 
 
   useEffect(() => {
@@ -758,25 +797,20 @@ const Gravacoes = ({ setGlobalAudioTrack }) => {
 
   const totalCount = activeTab === 'live'
     ? ongoingGravacoes.length
-    : activeTab === 'agendados'
-      ? scheduledGravacoes.length
-      : activeTab === 'manuais'
-        ? manualGravacoes.length
-      : concludedGravacoes.length;
+    : (listMeta.total || 0);
 
   // Paginação
-  const getCurrentPageItems = (items) => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return items.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  };
+  const getCurrentPageItems = (items) => items;
 
-  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+  const totalPages = activeTab === 'live'
+    ? Math.ceil(totalCount / ITEMS_PER_PAGE)
+    : (listMeta.total_pages || 0);
   const canPrevPage = currentPage > 1;
-  const canNextPage = currentPage < totalPages;
+  const canNextPage = totalPages ? currentPage < totalPages : false;
 
-  const paginatedScheduled = useMemo(() => getCurrentPageItems(scheduledGravacoes), [scheduledGravacoes, currentPage]);
-  const paginatedManual = useMemo(() => getCurrentPageItems(manualGravacoes), [manualGravacoes, currentPage]);
-  const paginatedConcluded = useMemo(() => getCurrentPageItems(concludedGravacoes), [concludedGravacoes, currentPage]);
+  const paginatedScheduled = useMemo(() => getCurrentPageItems(scheduledGravacoes), [scheduledGravacoes]);
+  const paginatedManual = useMemo(() => getCurrentPageItems(manualGravacoes), [manualGravacoes]);
+  const paginatedConcluded = useMemo(() => getCurrentPageItems(concludedGravacoes), [concludedGravacoes]);
 
   // Resetar página quando mudar de aba ou filtros
   useEffect(() => {

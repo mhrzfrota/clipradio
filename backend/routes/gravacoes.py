@@ -7,10 +7,65 @@ from models.user import User
 from utils.jwt_utils import token_required, decode_token
 from flask import request as flask_request
 from datetime import datetime
-from sqlalchemy import desc
+from sqlalchemy import and_, or_, desc
 from services.recording_service import hydrate_gravacao_metadata
 
 bp = Blueprint('gravacoes', __name__)
+MAX_PER_PAGE = 100
+
+def _parse_positive_int(value, default):
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return parsed if parsed > 0 else default
+
+def _parse_nonnegative_int(value, default):
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return parsed if parsed >= 0 else default
+
+def _parse_iso_datetime(value):
+    if not value:
+        return None
+    try:
+        if value.endswith('Z'):
+            value = f"{value[:-1]}+00:00"
+        return datetime.fromisoformat(value)
+    except Exception:
+        return None
+
+def _apply_gravacoes_filters(query, *, user_id, is_admin, radio_id=None, data_filter=None, cidade=None, estado=None, status=None, tipo=None):
+    if not is_admin:
+        query = query.filter(Gravacao.user_id == user_id)
+
+    if radio_id and radio_id != 'all':
+        query = query.filter(Gravacao.radio_id == radio_id)
+
+    if status:
+        query = query.filter(Gravacao.status == status)
+
+    if tipo:
+        query = query.filter(Gravacao.tipo == tipo)
+
+    if data_filter:
+        try:
+            start_date = datetime.strptime(data_filter, '%Y-%m-%d')
+            end_date = datetime(start_date.year, start_date.month, start_date.day, 23, 59, 59)
+            query = query.filter(Gravacao.criado_em >= start_date, Gravacao.criado_em <= end_date)
+        except Exception:
+            pass
+
+    if cidade or estado:
+        query = query.join(Radio)
+        if cidade:
+            query = query.filter(Radio.cidade.ilike(f"%{cidade}%"))
+        if estado:
+            query = query.filter(db.func.upper(Radio.estado) == estado.upper())
+
+    return query
 
 def get_user_ctx():
     token = flask_request.headers.get('Authorization', '').replace('Bearer ', '')
@@ -59,52 +114,111 @@ def get_gravacoes():
     user_id = ctx.get('user_id')
     is_admin = ctx.get('is_admin', False)
     include_stats = (request.args.get('include_stats') or '').lower() == 'true'
-    query = Gravacao.query
-    if not is_admin:
-        query = query.filter_by(user_id=user_id)
-
-    # Filtros
     radio_id = request.args.get('radio_id')
-    if radio_id and radio_id != 'all':
-        query = query.filter_by(radio_id=radio_id)
-    
-    # Filtro por data
     data_filter = request.args.get('data')
-    if data_filter:
-        try:
-            start_date = datetime.strptime(data_filter, '%Y-%m-%d')
-            end_date = datetime(start_date.year, start_date.month, start_date.day, 23, 59, 59)
-            query = query.filter(Gravacao.criado_em >= start_date, Gravacao.criado_em <= end_date)
-        except:
-            pass
-    
-    # Filtro por cidade/estado (via join com radio)
-    cidade = request.args.get('cidade')
-    estado = request.args.get('estado')
-    
-    gravacoes = query.order_by(Gravacao.criado_em.desc()).all()
-    
-    # Aplicar filtros de cidade/estado após busca
-    if cidade or estado:
-        gravacoes = [g for g in gravacoes if g.radio and 
-                     (not cidade or (g.radio.cidade and cidade.lower() in g.radio.cidade.lower())) and
-                     (not estado or (g.radio.estado and estado.upper() == g.radio.estado.upper()))]
-    
-    # Enriquecer metadados com dados reais do arquivo (duração, tamanho, status)
+    cidade = (request.args.get('cidade') or '').strip() or None
+    estado = (request.args.get('estado') or '').strip() or None
+    status = (request.args.get('status') or '').strip() or None
+    tipo = (request.args.get('tipo') or '').strip() or None
+
+    # Paginacao
+    limit_arg = request.args.get('limit')
+    offset_arg = request.args.get('offset')
+    page = _parse_positive_int(request.args.get('page'), 1)
+    per_page = _parse_positive_int(request.args.get('per_page'), 10)
+    per_page = min(per_page, MAX_PER_PAGE)
+
+    if limit_arg is not None:
+        limit = _parse_positive_int(limit_arg, per_page)
+        limit = min(limit, MAX_PER_PAGE)
+        offset = _parse_nonnegative_int(offset_arg, 0)
+        page = (offset // limit) + 1 if limit else 1
+        per_page = limit
+    else:
+        limit = per_page
+        offset = (page - 1) * per_page
+
+    cursor_dt = _parse_iso_datetime(request.args.get('cursor'))
+    cursor_id = (request.args.get('cursor_id') or '').strip() or None
+
+    base_query = _apply_gravacoes_filters(
+        Gravacao.query,
+        user_id=user_id,
+        is_admin=is_admin,
+        radio_id=radio_id,
+        data_filter=data_filter,
+        cidade=cidade,
+        estado=estado,
+        status=status,
+        tipo=tipo,
+    )
+
+    total = base_query.with_entities(db.func.count(Gravacao.id)).scalar() or 0
+    total_pages = (total + per_page - 1) // per_page if total else 0
+    if limit_arg is None and total_pages and page > total_pages:
+        page = total_pages
+        offset = (page - 1) * per_page
+
+    gravacoes_query = base_query.order_by(Gravacao.criado_em.desc(), Gravacao.id.desc())
+    if cursor_dt:
+        offset = 0
+        page = 1
+        if cursor_id:
+            gravacoes_query = gravacoes_query.filter(
+                or_(
+                    Gravacao.criado_em < cursor_dt,
+                    and_(Gravacao.criado_em == cursor_dt, Gravacao.id < cursor_id)
+                )
+            )
+        else:
+            gravacoes_query = gravacoes_query.filter(Gravacao.criado_em < cursor_dt)
+
+    gravacoes = gravacoes_query.offset(offset).limit(limit).all()
+
+    # Enriquecer metadados com dados reais do arquivo (duracao, tamanho, status)
     gravacoes = [hydrate_gravacao_metadata(g, autocommit=True) for g in gravacoes]
 
     payload = [g.to_dict(include_radio=True) for g in gravacoes]
 
-    if include_stats:
-        stats = {
-            'totalGravacoes': len(gravacoes),
-            'totalDuration': sum((g.duracao_segundos or 0) or ((g.duracao_minutos or 0) * 60) for g in gravacoes),
-            'totalSize': sum(g.tamanho_mb or 0 for g in gravacoes),
-            'uniqueRadios': len(set(g.radio_id for g in gravacoes)),
-        }
-        return jsonify({'items': payload, 'stats': stats}), 200
+    meta = {
+        'page': page,
+        'per_page': per_page,
+        'total': total,
+        'total_pages': total_pages,
+    }
+    if cursor_dt and gravacoes and len(gravacoes) >= limit:
+        last_item = gravacoes[-1]
+        meta['next_cursor'] = last_item.criado_em.isoformat() if last_item.criado_em else None
+        meta['next_cursor_id'] = last_item.id
 
-    return jsonify(payload), 200
+    if include_stats:
+        duration_expr = db.func.coalesce(Gravacao.duracao_segundos, Gravacao.duracao_minutos * 60)
+        stats_query = db.session.query(
+            db.func.coalesce(db.func.sum(duration_expr), 0),
+            db.func.coalesce(db.func.sum(Gravacao.tamanho_mb), 0),
+            db.func.count(db.distinct(Gravacao.radio_id)),
+        )
+        stats_query = _apply_gravacoes_filters(
+            stats_query,
+            user_id=user_id,
+            is_admin=is_admin,
+            radio_id=radio_id,
+            data_filter=data_filter,
+            cidade=cidade,
+            estado=estado,
+            status=status,
+            tipo=tipo,
+        )
+        stats_row = stats_query.first() or (0, 0, 0)
+        stats = {
+            'totalGravacoes': total,
+            'totalDuration': int(stats_row[0] or 0),
+            'totalSize': float(stats_row[1] or 0),
+            'uniqueRadios': int(stats_row[2] or 0),
+        }
+        return jsonify({'items': payload, 'stats': stats, 'meta': meta}), 200
+
+    return jsonify({'items': payload, 'meta': meta}), 200
 
 
 @bp.route('/ongoing', methods=['GET'])
@@ -193,19 +307,21 @@ def get_stats():
     ctx = get_user_ctx()
     user_id = ctx.get('user_id')
     is_admin = ctx.get('is_admin', False)
-    if is_admin:
-        gravacoes = Gravacao.query.all()
-    else:
-        gravacoes = Gravacao.query.filter_by(user_id=user_id).all()
+    query = Gravacao.query
+    if not is_admin:
+        query = query.filter(Gravacao.user_id == user_id)
 
-
-    # Garantir que duração/tamanho reflitam o arquivo salvo
-    gravacoes = [hydrate_gravacao_metadata(g, autocommit=True) for g in gravacoes]
-    
-    total = len(gravacoes)
-    total_duration = sum(g.duracao_segundos or 0 for g in gravacoes)
-    total_size = sum(g.tamanho_mb or 0 for g in gravacoes)
-    unique_radios = len(set(g.radio_id for g in gravacoes))
+    duration_expr = db.func.coalesce(Gravacao.duracao_segundos, Gravacao.duracao_minutos * 60)
+    stats_row = query.with_entities(
+        db.func.count(Gravacao.id),
+        db.func.coalesce(db.func.sum(duration_expr), 0),
+        db.func.coalesce(db.func.sum(Gravacao.tamanho_mb), 0),
+        db.func.count(db.distinct(Gravacao.radio_id)),
+    ).first() or (0, 0, 0, 0)
+    total = int(stats_row[0] or 0)
+    total_duration = int(stats_row[1] or 0)
+    total_size = float(stats_row[2] or 0)
+    unique_radios = int(stats_row[3] or 0)
     
     return jsonify({
         'totalGravacoes': total,

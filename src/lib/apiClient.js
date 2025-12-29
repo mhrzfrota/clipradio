@@ -113,6 +113,12 @@ class ApiClient {
     if (filters.data) params.append('data', filters.data);
     if (filters.cidade) params.append('cidade', filters.cidade);
     if (filters.estado) params.append('estado', filters.estado);
+    if (filters.status) params.append('status', filters.status);
+    if (filters.tipo) params.append('tipo', filters.tipo);
+    if (filters.page != null) params.append('page', filters.page);
+    if (filters.perPage != null) params.append('per_page', filters.perPage);
+    if (filters.limit != null) params.append('limit', filters.limit);
+    if (filters.offset != null) params.append('offset', filters.offset);
     if (filters.includeStats) params.append('include_stats', 'true');
     
     const query = params.toString();
