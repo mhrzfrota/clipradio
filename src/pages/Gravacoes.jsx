@@ -259,7 +259,7 @@ const GravacaoItem = ({ gravacao, index, isPlaying, onPlay, onStop, setGlobalAud
 
       const audioUrl = resolveFileUrl(gravacao.arquivo_url);
       if (!audioUrl) {
-        toast({ title: "Download indisponÇðvel", description: "O arquivo desta gravaÇõÇœo nÇœo foi encontrado.", variant: 'destructive' });
+        toast({ title: "Download indisponÇðvel", description: "O arquivo desta gravação não foi encontrado.", variant: 'destructive' });
         return;
       }
       const response = await fetch(audioUrl);
@@ -284,7 +284,7 @@ const GravacaoItem = ({ gravacao, index, isPlaying, onPlay, onStop, setGlobalAud
 
       window.URL.revokeObjectURL(url);
 
-      toast({ title: "Download Iniciado", description: "O arquivo de auRadio esta sendo baixado." });
+      toast({ title: "Download Iniciado", description: "O arquivo de áudio esta sendo baixado." });
 
     } catch (error) {
 
