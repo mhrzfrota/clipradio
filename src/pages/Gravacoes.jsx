@@ -14,6 +14,16 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_ORIGIN = API_URL.replace(/\/api\/?$/, '');
+
+const resolveFileUrl = (url) => {
+  if (!url) return '';
+  if (/^(https?:|blob:|data:)/i.test(url)) return url;
+  if (url.startsWith('/')) return `${API_ORIGIN}${url}`;
+  return `${API_ORIGIN}/${url}`;
+};
+
 
 const StatCard = ({ icon, value, unit, delay, gradient }) => (
 
@@ -216,11 +226,12 @@ const GravacaoItem = ({ gravacao, index, isPlaying, onPlay, onStop, setGlobalAud
 
     } else {
 
+      const audioUrl = resolveFileUrl(gravacao.arquivo_url);
       onPlay();
 
       setGlobalAudioTrack({
 
-        src: gravacao.arquivo_url,
+        src: audioUrl,
 
         title: gravacao.radios?.nome || 'Gravação',
 
@@ -246,7 +257,12 @@ const GravacaoItem = ({ gravacao, index, isPlaying, onPlay, onStop, setGlobalAud
 
     try {
 
-      const response = await fetch(gravacao.arquivo_url);
+      const audioUrl = resolveFileUrl(gravacao.arquivo_url);
+      if (!audioUrl) {
+        toast({ title: "Download indisponÇðvel", description: "O arquivo desta gravaÇõÇœo nÇœo foi encontrado.", variant: 'destructive' });
+        return;
+      }
+      const response = await fetch(audioUrl);
 
       const blob = await response.blob();
 
@@ -257,7 +273,7 @@ const GravacaoItem = ({ gravacao, index, isPlaying, onPlay, onStop, setGlobalAud
       a.style.display = 'none';
 
       a.href = url;
-      const suggestedName = (gravacao.arquivo_nome || (gravacao.arquivo_url ? gravacao.arquivo_url.split('/').pop() : '') || '').trim();
+      const suggestedName = (gravacao.arquivo_nome || (audioUrl ? audioUrl.split('/').pop() : '') || '').trim();
       const baseName = suggestedName || `gravacao_${gravacao.id}`;
       const downloadName = baseName.includes('.') ? baseName : `${baseName}.mp3`;
       a.download = downloadName;
